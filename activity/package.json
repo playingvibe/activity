@@ -1,0 +1,29 @@
+{
+  "name": "vibe-activity",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Discord Activity frontend for Vibe. Separate build unit from the bot — the bot's runtime dependency tree never gains React or Vite.",
+  "scripts": {
+    "dev": "vite",
+    "lint": "eslint . --max-warnings 0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@discord/embedded-app-sdk": "^2.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^5.1.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.70.1",
+    "vite": "^7.1.0"
+  }
+}

@@ -1,0 +1,28 @@
+name: Bug report
+description: Something in the Activity is broken or looks wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Security problems don't go here**: see SECURITY.md.
+        Never paste a token or anyone's private data.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did you see it?
+      options: [Discord desktop, Discord on a phone, The mock in a browser (?mock=1), Not sure]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you saw, and what you expected instead. A screenshot or a short recording helps.
+    validations:
+      required: true
+  - type: input
+    id: state
+    attributes:
+      label: State or address, if it's in the mock
+      placeholder: "?mock=1&phase=stale&background=bars"

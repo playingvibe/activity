@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Activity backgrounds</title>
+    <style>
+      body { margin: 0; padding: 1.25rem; background: #101014; color: #e8e8ea; font: 14px/1.4 system-ui, sans-serif; }
+      h1 { font-size: 1.1rem; margin: 0 0 0.25rem; }
+      p { margin: 0 0 1rem; color: #9a9aa2; max-width: 60ch; }
+      code { color: #e8e8ea; }
+      .row { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; }
+      figure { margin: 0; }
+      figcaption { margin: 0.4rem 0 0; font-size: 0.85rem; color: #9a9aa2; }
+      iframe { border: 1px solid #2a2a30; border-radius: 12px; background: #0b0b0d; display: block; }
+      .phone { width: 300px; height: 560px; }
+      .wide { width: 560px; height: 315px; }
+    </style>
+  </head>
+  <body>
+    <h1>Activity backgrounds</h1>
+    <p>
+      Every background on a phone-sized and a wide frame, from the mock player. Open it with
+      <code>npm run dev</code> at <code>/dev/backgrounds.html</code>. To preview a new style, add its key
+      to the list below (it is the key in <code>src/generated/cardBackgrounds.ts</code>).
+    </p>
+    <div id="grid"></div>
+    <script>
+      // Keep in step with CARD_BACKGROUND_STYLES.
+      const KEYS = ["waves", "marks", "bars", "grid", "aurora"];
+      const grid = document.getElementById("grid");
+      for (const key of [null, ...KEYS]) {
+        const query = "mock=1" + (key ? "&background=" + key : "");
+        const section = document.createElement("section");
+        section.innerHTML =
+          '<h1 style="margin-top:1.5rem">' + (key ?? "none (default)") + "</h1>" +
+          '<div class="row">' +
+          '<figure><iframe class="phone" src="/?' + query + '"></iframe><figcaption>phone</figcaption></figure>' +
+          '<figure><iframe class="wide" src="/?' + query + '"></iframe><figcaption>wide</figcaption></figure>' +
+          "</div>";
+        grid.appendChild(section);
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "name": "vibe-activity-repo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The Activity of Vibe, a Discord music bot: a live player that opens inside Discord, with a mock mode that needs no Discord.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "setup": "npm ci && npm --prefix activity ci",
+    "dev": "npm --prefix activity run dev",
+    "lint": "npm --prefix activity run lint",
+    "build": "npm --prefix activity run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/playingvibe/activity.git"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^1.0.8",
+    "ffmpeg-static": "^5.3.0",
+    "gifenc": "^1.0.3"
+  }
+}
