@@ -42,6 +42,8 @@ const run = promisify(execFile);
  *   node scripts/assets/record-activity-video.js
  *   node scripts/assets/record-activity-video.js --frames 60 --fps 12    a shorter loop
  *   node scripts/assets/record-activity-video.js --budget 1000           a laxer size ceiling, in KB
+ *   node scripts/assets/record-activity-video.js --client <application id> --out <file>   another
+ *       instance's palette (Vibe 2, Vibe 3, Beta), e.g. resource/brand/activity/vibe2-activity-preview.mp4
  */
 const ROOT = path.join(import.meta.dirname, "..", "..");
 const DIST = path.join(ROOT, "activity", "dist");
@@ -81,6 +83,8 @@ const OPTIONS = {
   /** Hard ceiling in KB. The upload is rejected above this, so it is not advisory. */
   budgetKb: Number(arg("budget", 500)),
   out: arg("out", OUT),
+  /** An application id whose palette to record (`?client=` in the mock); default is the flagship's. */
+  client: arg("client", null),
 };
 
 /**
@@ -153,7 +157,7 @@ async function main() {
   }
 
   const server = await serve(OPTIONS.port);
-  const url = `http://localhost:${OPTIONS.port}/?mock=1`;
+  const url = `http://localhost:${OPTIONS.port}/?mock=1${OPTIONS.client ? `&client=${OPTIONS.client}` : ""}`;
   const chrome = findChrome();
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "vibe-video-"));
 

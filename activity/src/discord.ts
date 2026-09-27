@@ -14,6 +14,13 @@ import { DiscordSDK } from "@discord/embedded-app-sdk";
  *   didn't need the SDK at all.
  */
 export function resolveClientId(): string | null {
+  // The `?mock=1` preview has no application, so `&client=<id>` stands in for one: it shows the palette
+  // that instance would have. Honoured only with `mock`, like `&background=`: a real session takes its
+  // application from the hostname, never from a query string.
+  const query = new URLSearchParams(window.location.search);
+  const mocked = query.has("mock") ? query.get("client") : null;
+  if (mocked && /^\d{17,20}$/.test(mocked)) return mocked;
+
   const fromEnv = import.meta.env.VITE_DISCORD_CLIENT_ID;
   if (fromEnv) return fromEnv;
 

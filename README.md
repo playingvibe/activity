@@ -25,6 +25,7 @@ nothing else is needed: no Discord application, no bot, no secrets.
 | `&background=bars` | A background: `waves`, `marks`, `bars`, `grid` or `aurora` |
 | `&phase=connecting` | The states the player passes through (`connecting`, `stale`, `error`, and so on) |
 | `&queueLength=300` | A long queue, to check the list and its heading |
+| `&client=<application id>` | The palette one instance would have (the ids and their colours are in `activity/src/generated/instances.ts`) |
 
 **Every background at once:** <http://localhost:5173/dev/backgrounds.html> shows each one on a phone-sized
 and a wide frame. It is served by the dev server only and is not part of the build.

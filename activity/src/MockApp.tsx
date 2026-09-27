@@ -23,6 +23,7 @@ export default function MockApp({ params }: { params: URLSearchParams }) {
  * - `&phase=error` — reconnecting gave up.
  * - `&queueLength=N` — a queue longer than the 50 tracks the server sends.
  * - `&background=bars` — one of the premium backdrops (waves, marks, bars, grid, aurora).
+ * - `&client=<application id>` — the palette that instance would have (see `resolveClientId`).
  */
 function mockSync(params: URLSearchParams): ActivitySync {
   const base = MOCK_SYNC.status.phase === "ready" ? MOCK_SYNC.status.state : null;
