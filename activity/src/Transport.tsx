@@ -224,7 +224,7 @@ export function Transport({
       {/* Progress as a hairline pinned to the top edge of the bar. Narrow frames have no room
           for a labelled scrubber, but losing progress entirely would be worse. */}
       {!track.isStream && (
-        <div style={S.transportHairline} aria-hidden="true">
+        <div style={S.transportHairline} className="vibe-hairline" aria-hidden="true">
           <div
             style={{
               ...S.transportHairlineFill,

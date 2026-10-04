@@ -57,7 +57,7 @@ export function TopBar({
   queueCount?: number;
 }) {
   return (
-    <div style={S.topBar}>
+    <div style={S.topBar} className="vibe-topbar">
       <div style={S.topBarBtns}>
         {onToggleQueue && (
           <button

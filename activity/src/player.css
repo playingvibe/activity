@@ -817,6 +817,100 @@ body {
 }
 
 /*
+ * Minimised: Discord's picture-in-picture window, about 560 x 315 and read-only (it cannot be
+ * clicked through), so there is nothing to press and no room to read a full player. It keeps what a
+ * glance needs: the thumbnail, the title and artist, and the progress bar when there is height for
+ * it. The controls, the volume, the queue and the top bar go.
+ *
+ * **Both dimensions, not just the height.** A phone held sideways is short too (often 360-420px),
+ * but it is wide enough to be a real player that people touch; only a window narrow *and* short
+ * is the minimised one.
+ *
+ * `:has(.vibe-transport)` scopes the hiding to the player itself: the profile and settings panels and
+ * the "nothing is playing" message render in the same shell without a transport bar, and must keep
+ * their body. The inline sizes in `playerStyles.ts` are beaten with `!important`, which a stylesheet
+ * cannot otherwise do.
+ */
+@media (max-width: 640px) and (max-height: 360px) {
+  .vibe-topbar {
+    display: none !important;
+  }
+
+  .vibe-app:has(.vibe-transport) {
+    grid-template-rows: minmax(0, 1fr);
+    align-content: center;
+  }
+
+  .vibe-app:has(.vibe-transport) .vibe-body {
+    display: none;
+  }
+
+  .vibe-app:has(.vibe-transport) .vibe-transport {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0.9rem;
+    align-self: center;
+    border-top: 0;
+    background: transparent;
+    backdrop-filter: none;
+    padding: 0 1.25rem;
+  }
+
+  .vibe-transport-center,
+  .vibe-transport-volume {
+    display: none;
+  }
+
+  .vibe-transport-meta {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .vibe-transport-meta img,
+  .vibe-transport-meta > div:first-child {
+    width: 84px !important;
+    height: 84px !important;
+    border-radius: 12px !important;
+  }
+
+  .vibe-transport-meta span:first-child {
+    font-size: 1.15rem !important;
+    white-space: normal !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .vibe-transport-meta span:nth-child(2) {
+    font-size: 0.9rem !important;
+  }
+
+  /* The progress hairline stops being pinned to a border that is not there and becomes the bar. */
+  .vibe-hairline {
+    position: static !important;
+    order: 2;
+    height: 5px !important;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+}
+
+/* A window too short for the bar as well keeps the thumbnail and the title, smaller. */
+@media (max-width: 640px) and (max-height: 200px) {
+  .vibe-hairline {
+    display: none;
+  }
+
+  .vibe-transport-meta img,
+  .vibe-transport-meta > div:first-child {
+    width: 56px !important;
+    height: 56px !important;
+  }
+}
+
+/*
  * Reduced motion.
  *
  * One animation is the reason it matters rather than a checkbox: `.vibe-mark-pulse` runs
