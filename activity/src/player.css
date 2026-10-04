@@ -819,8 +819,9 @@ body {
 /*
  * Minimised: Discord's picture-in-picture window, about 560 x 315 and read-only (it cannot be
  * clicked through), so there is nothing to press and no room to read a full player. It keeps what a
- * glance needs: the thumbnail, the title and artist, and the progress bar when there is height for
- * it. The controls, the volume, the queue and the top bar go.
+ * glance needs: the thumbnail, the title and artist, and the progress bar. The controls, the volume,
+ * the queue and the top bar go. The bar is never hidden for lack of height (an earlier version did, and
+ * Discord's window reports less height than it looks like, so it vanished): the thumbnail shrinks first.
  *
  * **Both dimensions, not just the height.** A phone held sideways is short too (often 360-420px),
  * but it is wide enough to be a real player that people touch; only a window narrow *and* short
@@ -888,26 +889,35 @@ body {
   }
 
   /* The progress hairline stops being pinned to a border that is not there and becomes the bar. */
+  /*
+   * The progress bar is the window's own bottom edge: full width, no inset, no rounding, so it reads as
+   * the frame's progress rather than as a control floating in it. Fixed to the viewport, which works
+   * because the bar above no longer has a `backdrop-filter` (that would make it the containing block).
+   * The inline track is 8% white, invisible on this background, so it is lightened; the fill keeps its accent.
+   */
   .vibe-hairline {
-    position: static !important;
-    order: 2;
-    height: 5px !important;
-    border-radius: 999px;
+    position: fixed !important;
+    /* The inline style pins it to the top edge (`top: 0`), which would otherwise win. */
+    top: auto !important;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 6px !important;
+    border-radius: 0;
     overflow: hidden;
+    background: rgba(255, 255, 255, 0.24) !important;
+    z-index: 2;
   }
 }
 
-/* A window too short for the bar as well keeps the thumbnail and the title, smaller. */
-@media (max-width: 640px) and (max-height: 200px) {
-  .vibe-hairline {
-    display: none;
-  }
-
+/* A shorter window keeps the same bar and gives the room to the thumbnail instead. */
+@media (max-width: 640px) and (max-height: 250px) {
   .vibe-transport-meta img,
   .vibe-transport-meta > div:first-child {
     width: 56px !important;
     height: 56px !important;
   }
+
 }
 
 /*
