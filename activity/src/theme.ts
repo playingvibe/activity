@@ -4,7 +4,7 @@ export type { Theme };
 
 // Generated from src/domain/constants/InstanceTheme.js, the palette's one source; the reasoning
 // behind the colours lives there. `FALLBACK` is the flagship's entry itself, which is what lets
-// ALL_THEMES below filter it out by identity.
+// the palette lookup falls back to it.
 const FALLBACK: Theme = FALLBACK_THEME;
 
 /**
@@ -17,22 +17,11 @@ const FALLBACK: Theme = FALLBACK_THEME;
  * whose real ID isn't wired in yet (or a future one) still renders something coherent
  * instead of breaking.
  */
-/** The development instance's client id. Auto-enables the dev palette picker — see isDevMode(). */
-export const DEV_CLIENT_ID = "800075471290236968";
-
 const THEMES: Record<string, Theme> = INSTANCE_THEMES;
 
 export function resolveTheme(clientId: string): Theme {
   return THEMES[clientId] ?? FALLBACK;
 }
-
-/**
- * Every palette, for the temporary `?dev=1` theme picker in Player.tsx — the only way to
- * eyeball an instance's colours without deploying under that instance's client ID.
- *
- * TEMPORARY: delete this alongside the picker once the palettes are signed off.
- */
-export const ALL_THEMES: Theme[] = [FALLBACK, ...Object.values(THEMES).filter((t) => t !== FALLBACK)];
 
 /**
  * A theme from an arbitrary accent, for the per-user Activity colour.

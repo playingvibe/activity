@@ -4,11 +4,11 @@ import { useRichPresence } from "./useRichPresence";
 import { useCanManageGuild } from "./useGuildPermissions";
 import { resolveClientId } from "./discord";
 import { thumbnailSrc } from "./media";
-import { DEV_CLIENT_ID, resolveTheme, themeFromAccent, type Theme } from "./theme";
+import { resolveTheme, themeFromAccent } from "./theme";
 import Profile from "./Profile";
 import Settings from "./Settings";
 import { Shell, CenterMessage, ConnectingState, Notice } from "./Shell";
-import { ThemePicker, TopBar } from "./TopBar";
+import { TopBar } from "./TopBar";
 import { Transport, Artwork, NowPlaying } from "./Transport";
 import { Queue } from "./QueueRail";
 import { S } from "./playerStyles";
@@ -47,24 +47,8 @@ export default function Player({ sync: override }: { sync?: ActivitySync } = {})
   // ?mock=1 preview) falls through to resolveTheme's own default palette.
   const resolved = resolveTheme(resolveClientId() ?? "");
 
-  // TEMPORARY dev affordance — see ThemePicker.
-  //
-  // Three ways in, because Discord builds the Activity's iframe URL itself and there is no
-  // way to append `?dev=1` to a real session:
-  //   1. `?dev=1`          — the local `npm run dev` preview.
-  //   2. the Vibe Dev app  — launching the Activity from that instance always shows it.
-  //   3. a localStorage flag — for checking palettes from any other instance, set once from
-  //      the Activity's own console: localStorage.setItem("vibe.dev", "1")
-  // None of these can switch on for a normal user of a production instance.
-  const devMode =
-    new URLSearchParams(window.location.search).has("dev") ||
-    resolveClientId() === DEV_CLIENT_ID ||
-    readDevFlag();
-  const [themeOverride, setThemeOverride] = useState<Theme | null>(null);
-  // Precedence, narrowest first: the dev picker beats the user's own choice, which beats the
-  // instance palette. The dev picker is a debugging affordance and has to win, or checking a
-  // palette would silently show whoever is testing their own colour instead.
-  const theme = themeOverride ?? (sync.prefs?.accent ? themeFromAccent(sync.prefs.accent) : resolved);
+  // Precedence, narrowest first: the user's own choice beats the instance palette.
+  const theme = sync.prefs?.accent ? themeFromAccent(sync.prefs.accent) : resolved;
 
   // A client-side hint only — see useGuildPermissions.ts. Whether the settings button even
   // renders has no bearing on real access; the server re-checks on every request regardless.
@@ -146,7 +130,6 @@ export default function Player({ sync: override }: { sync?: ActivitySync } = {})
 
   return (
     <Shell theme={theme} backdrop={sync.prefs?.background ?? null} floored>
-      {devMode && <ThemePicker current={theme} onPick={setThemeOverride} />}
       <TopBar
         canManageGuild={canManageGuild}
         onOpen={setView}
@@ -221,27 +204,3 @@ function useQueueOpen(): [boolean, (open: boolean) => void] {
 
   return [open, set];
 }
-
-/**
- * TEMPORARY, paired with ThemePicker. Wrapped because storage genuinely throws in a webview
- * with site data blocked, and a dev affordance must never be able to take the player down.
- */
-function readDevFlag(): boolean {
-  try {
-    return window.localStorage.getItem("vibe.dev") === "1";
-  } catch {
-    return false;
-  }
-}
-
-/**
- * TEMPORARY: floating palette switcher, shown only with `?dev=1`.
- *
- * Exists because a given instance's colours can otherwise only be seen by deploying under
- * that instance's client ID — the palette is keyed off the hostname, so there is no way to
- * compare Vibe 2's blue against Vibe 3's yellow in one sitting. Overrides the resolved theme
- * in memory only; nothing is persisted and nothing reaches the server.
- *
- * Delete this component, its `ALL_THEMES` export, and the `devMode` branch in Player once the
- * palettes are signed off.
- */

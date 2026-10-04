@@ -833,20 +833,20 @@ body {
  * cannot otherwise do.
  */
 @media (max-width: 640px) and (max-height: 360px) {
-  .vibe-topbar {
+  :root:not([data-mini]) .vibe-topbar {
     display: none !important;
   }
 
-  .vibe-app:has(.vibe-transport) {
+  :root:not([data-mini]) .vibe-app:has(.vibe-transport) {
     grid-template-rows: minmax(0, 1fr);
     align-content: center;
   }
 
-  .vibe-app:has(.vibe-transport) .vibe-body {
+  :root:not([data-mini]) .vibe-app:has(.vibe-transport) .vibe-body {
     display: none;
   }
 
-  .vibe-app:has(.vibe-transport) .vibe-transport {
+  :root:not([data-mini]) .vibe-app:has(.vibe-transport) .vibe-transport {
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -859,24 +859,24 @@ body {
     padding: 0 1.25rem;
   }
 
-  .vibe-transport-center,
-  .vibe-transport-volume {
+  :root:not([data-mini]) .vibe-transport-center,
+  :root:not([data-mini]) .vibe-transport-volume {
     display: none;
   }
 
-  .vibe-transport-meta {
+  :root:not([data-mini]) .vibe-transport-meta {
     display: flex;
     gap: 1rem;
   }
 
-  .vibe-transport-meta img,
-  .vibe-transport-meta > div:first-child {
+  :root:not([data-mini]) .vibe-transport-meta img,
+  :root:not([data-mini]) .vibe-transport-meta > div:first-child {
     width: 84px !important;
     height: 84px !important;
     border-radius: 12px !important;
   }
 
-  .vibe-transport-meta span:first-child {
+  :root:not([data-mini]) .vibe-transport-meta span:first-child {
     font-size: 1.15rem !important;
     white-space: normal !important;
     display: -webkit-box;
@@ -884,18 +884,17 @@ body {
     -webkit-box-orient: vertical;
   }
 
-  .vibe-transport-meta span:nth-child(2) {
+  :root:not([data-mini]) .vibe-transport-meta span:nth-child(2) {
     font-size: 0.9rem !important;
   }
 
-  /* The progress hairline stops being pinned to a border that is not there and becomes the bar. */
   /*
    * The progress bar is the window's own bottom edge: full width, no inset, no rounding, so it reads as
    * the frame's progress rather than as a control floating in it. Fixed to the viewport, which works
    * because the bar above has no `backdrop-filter` (that would make it the containing block).
    * The inline track is 8% white, invisible on this background, so it is lightened; the fill keeps its accent.
    */
-  .vibe-hairline {
+  :root:not([data-mini]) .vibe-hairline {
     position: fixed !important;
     /* The inline style pins it to the top edge (`top: 0`), which would otherwise win. */
     top: auto !important;
@@ -912,12 +911,167 @@ body {
 
 /* A shorter window keeps the same bar and gives the room to the thumbnail instead. */
 @media (max-width: 640px) and (max-height: 250px) {
-  .vibe-transport-meta img,
-  .vibe-transport-meta > div:first-child {
+  :root:not([data-mini]) .vibe-transport-meta img,
+  :root:not([data-mini]) .vibe-transport-meta > div:first-child {
     width: 56px !important;
     height: 56px !important;
   }
 
+}
+
+/*
+ * Minimised on a phone (`data-mini`, set by `miniWindow.ts`): a portrait window that keeps one shape as it
+ * is zoomed, from about 90 x 170 to 340 x 641, with rounded corners, which the window itself supplies.
+ * Nothing is interactive, so the top bar, the queue, the controls and the volume go in both tiers.
+ * The inline sizes in `playerStyles.ts` are beaten with `!important`, which a stylesheet cannot otherwise do.
+ */
+:root[data-mini] .vibe-topbar {
+  display: none !important;
+}
+
+:root[data-mini] .vibe-app:has(.vibe-transport) {
+  grid-template-rows: minmax(0, 1fr);
+  padding: 0;
+  /* Only the middle square of the page is shown: lay everything out inside it. */
+  height: var(--mini-side) !important;
+  /* An offset, not a margin: the main element carries an inline `margin: 0`, and is position: relative. */
+  top: var(--mini-top);
+  min-height: 0 !important;
+  overflow: hidden;
+}
+
+:root[data-mini] .vibe-app:has(.vibe-transport) .vibe-body,
+:root[data-mini] .vibe-transport-center,
+:root[data-mini] .vibe-transport-volume {
+  display: none;
+}
+
+:root[data-mini] .vibe-transport-meta {
+  display: flex;
+}
+
+/* Tiny: the artwork is the window. Cropped to its shape by `object-fit`, never stretched; no title, no bar. */
+:root[data-mini="tiny"] .vibe-app:has(.vibe-transport) .vibe-transport {
+  position: fixed;
+  top: var(--mini-top);
+  right: 0;
+  left: 0;
+  height: var(--mini-side);
+  display: block;
+  padding: 0;
+  border-top: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+:root[data-mini="tiny"] .vibe-transport-meta {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+:root[data-mini="tiny"] .vibe-transport-meta > div:last-child {
+  /* Beats the inline `display: flex` on the text column. */
+  display: none !important;
+}
+
+:root[data-mini="tiny"] .vibe-transport-meta img,
+:root[data-mini="tiny"] .vibe-transport-meta > div:first-child {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  object-fit: cover;
+}
+
+:root[data-mini="tiny"] .vibe-hairline {
+  display: none !important;
+}
+
+/*
+ * Stack: the artwork across the top, then the title, the artist and the progress bar.
+ *
+ * **Sized in `cqw` (the window's own width, via a container), not `vw`.** In Discord's minimised window the
+ * viewport units did not match the window, so the text and gaps came out far too large and pushed the
+ * artist and the bar out of sight. A container unit measures the element it is inside.
+ *
+ * **The artwork gives way first.** The transport is capped at the window's height and the picture is the
+ * one thing allowed to shrink (it is cropped by `object-fit`, so it simply gets less tall), so the title,
+ * the artist and the bar are always on screen however short the window turns out to be.
+ */
+:root[data-mini="stack"] .vibe-app {
+  container-type: inline-size;
+}
+
+:root[data-mini="stack"] .vibe-app:has(.vibe-transport) .vibe-transport {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  align-self: center;
+  gap: 4.5cqw;
+  padding: 6cqw;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+:root[data-mini="stack"] .vibe-transport-meta {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4cqw;
+  min-height: 0;
+  flex: 0 1 auto;
+}
+
+/* A square, smaller than the window is wide, so it keeps its proportions and leaves room for the text and the
+   bar below it (about 40cqw of them): nothing is pushed out and the picture is never stretched. Centred. */
+:root[data-mini="stack"] .vibe-transport-meta img,
+:root[data-mini="stack"] .vibe-transport-meta > div:first-child {
+  width: 56cqw !important;
+  height: 56cqw !important;
+  align-self: center;
+  aspect-ratio: 1 / 1;
+  flex: 0 1 auto !important;
+  min-height: 0 !important;
+  border-radius: 5cqw !important;
+  object-fit: cover;
+}
+
+/* The title and the artist, centred under the picture. */
+:root[data-mini="stack"] .vibe-transport-meta > div:last-child {
+  flex: none;
+  align-items: center;
+  text-align: center;
+}
+
+:root[data-mini="stack"] .vibe-transport-meta span:first-child {
+  font-size: 7cqw !important;
+  white-space: normal !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+:root[data-mini="stack"] .vibe-transport-meta span:nth-child(2) {
+  font-size: 5.2cqw !important;
+}
+
+/* The bottom edge of the visible square, full width, like the desktop bar: absolute inside `.vibe-app` (which
+   is that square), so it sticks to the bottom however the text above it sits. The inline track is 8% white,
+   invisible on this background, so it is lightened; the fill keeps its accent. */
+:root[data-mini="stack"] .vibe-hairline {
+  position: absolute !important;
+  top: auto !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: max(5px, 2cqw) !important;
+  border-radius: 0;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.24) !important;
 }
 
 /*

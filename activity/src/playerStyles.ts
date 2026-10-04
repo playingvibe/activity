@@ -57,42 +57,6 @@ export const S: Record<string, CSSProperties> = {
   },
   topBarBtns: { display: "flex", gap: "0.5rem" },
 
-  // --- TEMPORARY dev theme picker, delete with the component ---
-  devPicker: { position: "fixed", right: 12, bottom: 108, zIndex: 50 },
-  devPickerBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: "50%",
-    border: "2px solid rgba(255,255,255,0.5)",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-  },
-  devPickerMenu: {
-    position: "absolute",
-    right: 0,
-    bottom: 42,
-    background: "#17171a",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 10,
-    padding: "0.35rem",
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.15rem",
-    minWidth: 150,
-    boxShadow: "0 10px 28px rgba(0,0,0,0.55)",
-  },
-  devPickerOption: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.5rem",
-    justifyContent: "flex-start",
-    width: "100%",
-    padding: "0.4rem 0.55rem",
-    borderRadius: 7,
-    fontSize: "0.8rem",
-    background: "transparent",
-    color: "#f5f2f3",
-  },
-  devPickerSwatch: { width: 12, height: 12, borderRadius: "50%", flex: "none" },
   topBarBtn: {
     // 40px, not the visually-tighter 36 an earlier pass used — Apple/Android both recommend
     // ~44px minimum touch targets, and this is a corner tap target on a control surface
