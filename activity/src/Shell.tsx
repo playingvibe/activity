@@ -22,7 +22,7 @@ export function Shell({
   theme: Theme;
   /** A transport bar is pinned to the bottom, so a backdrop that stands on a floor stands on its top edge. */
   floored?: boolean;
-  /** `"waves"` | `"marks"` | null. The same vocabulary as the rank card, deliberately. */
+  /** A key from `CARD_BACKGROUND_KEYS`, or null. The same vocabulary as the rank card, deliberately. */
   backdrop?: string | null;
 }) {
   const mainStyle: CSSProperties = {
@@ -66,13 +66,12 @@ export function ConnectingState({ accent, reason }: { accent: string; reason?: s
         <VibeMarkIcon size={56} />
       </div>
       <span style={S.connectingLabel}>Connecting…</span>
-      {/* Why it is still waiting, when the server said. Without this a refused connection looked
-          identical to a slow one, forever. */}
-      {reason && (
-        <span role="status" style={S.hintLine}>
-          {reason}
-        </span>
-      )}
+      {/* Why it is still waiting, when the server said. So a refused connection does not look
+          like a slow one. Always mounted: a live region is announced when its text
+          changes, and one inserted with its text already in it often is not. */}
+      <span role="status" style={S.hintLine}>
+        {reason ?? ""}
+      </span>
     </div>
   );
 }
@@ -85,9 +84,11 @@ export function ConnectingState({ accent, reason }: { accent: string; reason?: s
  *
  * Polite rather than assertive: it should wait for a gap rather than interrupt.
  */
-export function Notice({ children }: { children: ReactNode }) {
+export function Notice({ children }: { children?: ReactNode }) {
+  // Always in the page, empty when there is nothing to say, and only its text changes. A region that
+  // appears with its text already inside it is the case screen readers commonly stay silent on.
   return (
-    <p style={S.notice} role="status">
+    <p style={children ? S.notice : S.noticeEmpty} role="status">
       {children}
     </p>
   );

@@ -1,9 +1,10 @@
-import { useEffect, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { useActivitySync } from "./useActivitySync";
 import { BackIcon } from "./icons";
+import { S as PlayerStyles } from "./playerStyles";
 
 type Props = {
-  sync: Pick<ReturnType<typeof useActivitySync>, "guildContext" | "notice" | "requestGuildContext">;
+  sync: Pick<ReturnType<typeof useActivitySync>, "guildContext" | "notice" | "requestGuildContext" | "status">;
   onBack: () => void;
 };
 
@@ -29,32 +30,40 @@ type Props = {
  * server re-checks ManageGuild on every request regardless of what this component does.
  */
 export default function Settings({ sync, onBack }: Props) {
-  const { guildContext, notice, requestGuildContext } = sync;
+  const { guildContext, notice, requestGuildContext, status } = sync;
+  const live = status.phase === "ready";
+  const heading = useRef<HTMLHeadingElement>(null);
 
+  // Asked again whenever the connection comes back, for the same reason as the profile.
   useEffect(() => {
     requestGuildContext();
-  }, [requestGuildContext]);
+  }, [requestGuildContext, live]);
+
+  // Moving here replaced the whole screen: start at the heading, not at the top of the page.
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
 
   if (!guildContext) {
     return (
       <div style={S.panel} className="vibe-fade-in">
-        <PanelHeader onBack={onBack} />
-        <p style={S.loading}>{notice ?? "Loading settings…"}</p>
+        <PanelHeader onBack={onBack} headingRef={heading} />
+        <p style={S.loading}>{notice ?? (live ? "Loading settings…" : "Waiting for Vibe to reconnect…")}</p>
       </div>
     );
   }
 
   const { config, overridden, roles, channels } = guildContext;
-  const nameOf = (list: { id: string; name: string }[], id: string) =>
-    list.find((item) => item.id === id)?.name ?? "a deleted channel";
+  const nameOf = (list: { id: string; name: string }[], id: string, gone: string) =>
+    list.find((item) => item.id === id)?.name ?? gone;
 
-  const channelNames = (ids: string[]) => ids.map((id) => `#${nameOf(channels, id)}`);
-  const roleNames = (ids: string[]) => ids.map((id) => nameOf(roles, id));
+  const channelNames = (ids: string[]) => ids.map((id) => `#${nameOf(channels, id, "a deleted channel")}`);
+  const roleNames = (ids: string[]) => ids.map((id) => nameOf(roles, id, "a deleted role"));
   const isOwn = (field: string) => overridden.includes(field);
 
   return (
     <div style={S.panel} className="vibe-fade-in">
-      <PanelHeader onBack={onBack} />
+      <PanelHeader onBack={onBack} headingRef={heading} />
       {notice && <p style={S.notice}>{notice}</p>}
 
       <p style={S.intro}>
@@ -110,7 +119,7 @@ export default function Settings({ sync, onBack }: Props) {
       <Row
         title="Audit log"
         hint="Where configuration changes are recorded."
-        value={config.logChannelId ? `#${nameOf(channels, config.logChannelId)}` : "Off"}
+        value={config.logChannelId ? `#${nameOf(channels, config.logChannelId, "a deleted channel")}` : "Off"}
       />
     </div>
   );
@@ -145,13 +154,15 @@ function Row({
   );
 }
 
-function PanelHeader({ onBack }: { onBack: () => void }) {
+function PanelHeader({ onBack, headingRef }: { onBack: () => void; headingRef?: RefObject<HTMLHeadingElement | null> }) {
   return (
     <div style={S.header}>
       <button className="vibe-icon-btn" style={S.backBtn} onClick={onBack} aria-label="Back">
         <BackIcon />
       </button>
-      <h1 style={S.title}>Settings</h1>
+      <h1 ref={headingRef} tabIndex={-1} style={S.title}>
+        Settings
+      </h1>
     </div>
   );
 }
@@ -201,14 +212,8 @@ const S: Record<string, CSSProperties> = {
     opacity: 0.9,
   },
   value: { margin: 0, fontSize: "0.9rem", lineHeight: 1.45 },
-  sectionHint: { margin: 0, fontSize: "0.74rem", opacity: 0.4 },
+  sectionHint: { margin: 0, fontSize: "0.74rem", opacity: 0.5 },
 
-  notice: {
-    margin: 0,
-    padding: "0.55rem 0.8rem",
-    borderRadius: 8,
-    background: "rgba(252, 54, 89, 0.14)",
-    color: "#ffb3c0",
-    fontSize: "0.8rem",
-  },
+  // The player's own notice, so the two cannot drift; the alignment is this panel's (it inherits).
+  notice: { ...PlayerStyles.notice, textAlign: "inherit" },
 };

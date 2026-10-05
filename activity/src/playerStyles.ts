@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
 /**
- * The player's static style objects, lifted out of `Player.tsx` (which was 1045 lines) unchanged.
+ * The player's static style objects.
  *
  * **Where a rule goes, and why.** The Activity styles from two places, and the split is real
  * rather than historical — but it was never written down, which is what made every new rule a
@@ -17,7 +17,7 @@ import type { CSSProperties } from "react";
  * - **Anything computed stays inline at the call site** — a theme accent, a stacking `zIndex`, a
  *   progress width. Those are values, not styles, and they cannot live in a stylesheet at all.
  *
- * Four elements deliberately straddle both (`playBtn`, `skipBtn`, `queue`, `queueRow`): their
+ * Three elements deliberately straddle both (`playBtn`, `skipBtn`, `queueRow`): their
  * static base is here and their `:hover`/breakpoint behaviour is in `player.css` under the
  * matching `vibe-*` class. That is the boundary working, not a leak — but when editing one of
  * those four, check both files.
@@ -58,7 +58,7 @@ export const S: Record<string, CSSProperties> = {
   topBarBtns: { display: "flex", gap: "0.5rem" },
 
   topBarBtn: {
-    // 40px, not the visually-tighter 36 an earlier pass used — Apple/Android both recommend
+    // 40px: Apple/Android both recommend
     // ~44px minimum touch targets, and this is a corner tap target on a control surface
     // that also has to work on mobile Activities.
     width: 40,
@@ -68,7 +68,7 @@ export const S: Record<string, CSSProperties> = {
     color: "#f5f2f3",
   },
   centerMessage: {
-    // No margin: auto here — .vibe-body--solo now centers its content itself (as a flex
+    // No margin: auto here — .vibe-body--solo centers its content itself (as a flex
     // column), so a child auto-margin isn't needed and, worse, would fight that centering
     // when a second child (Notice) was also present: see .vibe-body--solo's own comment.
     textAlign: "center",
@@ -106,8 +106,7 @@ export const S: Record<string, CSSProperties> = {
     zIndex: 1,
   },
   artFrame: {
-    // Grows with the available pane rather than sitting at a fixed 200px, which looked
-    // marooned once the frame was ~1265px wide. The vh term is what actually binds on a
+    // Grows with the available pane. The vh term is what actually binds on a
     // typical Discord frame, and it has to stay conservative enough that artwork plus the
     // title block still clears the top bar and transport on a short window.
     width: "min(58vw, 32vh, 300px)",
@@ -189,15 +188,13 @@ export const S: Record<string, CSSProperties> = {
     flex: "none",
   },
   transportLive: { fontSize: "0.7rem", opacity: 0.55 },
-  // Gap tightened from the original 3-button row (1rem) now that shuffle/loop flank it —
-  // five buttons at the old spacing would crowd a narrow panel.
+  // Five buttons (shuffle and loop flank the trio); a wider gap would crowd a narrow panel.
   transportRow: { display: "flex", alignItems: "center", gap: "0.7rem" },
   playBtn: { width: 56, height: 56 },
   skipBtn: { width: 44, height: 44 },
   // Shuffle/loop recede behind the primary transport trio — no background pill, just the
-  // glyph, matching how Spotify/Apple Music de-emphasize these relative to play/skip. Box
-  // bumped to 38 (from a visually-tighter 32) for touch-target size; the glyph itself is
-  // still drawn at its original small pixel size, so this doesn't change how it looks.
+  // glyph, matching how Spotify/Apple Music de-emphasize these relative to play/skip. A 38px
+  // box for touch; the glyph itself stays small.
   miniBtn: { width: 38, height: 38, background: "transparent" },
 
   queueSection: { minWidth: 0 },
@@ -205,10 +202,26 @@ export const S: Record<string, CSSProperties> = {
   queue: { listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "0.15rem" },
   queueRow: {
     display: "grid",
-    gridTemplateColumns: "34px 1fr auto auto",
+    gridTemplateColumns: "1fr auto",
     gap: "0.7rem",
     alignItems: "center",
     fontSize: "0.82rem",
+  },
+  // The row's main control: the play-now button, laid out as picture / title / length, with the
+  // browser's button look removed.
+  queuePlay: {
+    display: "grid",
+    gridTemplateColumns: "34px 1fr auto",
+    gap: "0.7rem",
+    alignItems: "center",
+    minWidth: 0,
+    padding: 0,
+    margin: 0,
+    border: 0,
+    background: "none",
+    color: "inherit",
+    font: "inherit",
+    textAlign: "left",
     cursor: "pointer",
   },
   queueArtImage: { width: 34, height: 34, borderRadius: 6, objectFit: "cover", display: "block" },
@@ -230,6 +243,10 @@ export const S: Record<string, CSSProperties> = {
     alignItems: "center",
     gap: "0.25rem",
     padding: "0.2rem 0.45rem",
+    // A <button>'s own look (a 2px outset border, Arial) is still there without these: this was measured in the
+    // browser, not assumed.
+    border: "none",
+    fontFamily: "inherit",
     borderRadius: 999,
     background: "rgba(255,255,255,0.08)",
     color: "inherit",
@@ -240,6 +257,18 @@ export const S: Record<string, CSSProperties> = {
   boostBtnActive: { background: "var(--vibe-accent)", color: "#0b0b0d", fontWeight: 700 },
 
   hint: { opacity: 0.5, fontSize: "0.8rem", margin: "0.4rem 0 0" },
+  // The live region with nothing in it: out of sight and out of the layout, but in the page.
+  noticeEmpty: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    margin: -1,
+    padding: 0,
+    overflow: "hidden",
+    clip: "rect(0 0 0 0)",
+    whiteSpace: "nowrap",
+    border: 0,
+  },
   notice: {
     margin: 0,
     padding: "0.55rem 0.8rem",

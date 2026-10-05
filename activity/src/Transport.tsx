@@ -1,5 +1,5 @@
-import { useEffect, useState, type CSSProperties } from "react";
-import { useLivePosition, type PlaybackState } from "./useActivitySync";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useLivePosition, type PlaybackState, type Track } from "./useActivitySync";
 import {
   PlayIcon,
   PauseIcon,
@@ -20,10 +20,7 @@ export function Artwork({ src, accent }: { src: string | null; accent: string })
   const frameStyle: CSSProperties = {
     ...S.artFrame,
     // A neutral shadow for depth plus a faint accent-tinted glow underneath — ties the card
-    // to the instance's palette without needing to blur the art itself. Cut hard from an
-    // earlier ~50%-alpha version (reported live as too strong, same "accent as a wash rather
-    // than a presence" note the background glow already got) — tighter reach (28px vs. 44px
-    // blur, -10px vs. -14px spread) and roughly a fifth the opacity.
+    // to the instance's palette without needing to blur the art itself.
     boxShadow: `0 10px 24px rgba(0,0,0,0.55), 0 12px 28px -10px ${accent}29`,
   };
 
@@ -46,9 +43,7 @@ export function Artwork({ src, accent }: { src: string | null; accent: string })
   );
 }
 
-export function NowPlaying({ state }: { state: PlaybackState }) {
-  const track = state.track!;
-
+export function NowPlaying({ state, track }: { state: PlaybackState; track: Track }) {
   return (
     <div style={S.meta} className="vibe-fade-in">
       <p style={S.eyebrow}>{state.paused ? "Paused" : "Now playing"}</p>
@@ -60,6 +55,9 @@ export function NowPlaying({ state }: { state: PlaybackState }) {
   );
 }
 
+/** How long the keyboard must be still before a slider sends where it was set. */
+const KEY_COMMIT_IDLE_MS = 400;
+
 /**
  * A range input whose thumb is held locally while dragged.
  *
@@ -68,6 +66,9 @@ export function NowPlaying({ state }: { state: PlaybackState }) {
  * and trip the server's rate limiter. The seek slider additionally has to ignore its own
  * `value` prop mid-drag, or each incoming broadcast would yank the thumb back under the
  * finger. `resetKey` releases the local value once the server confirms with a fresh sample.
+ *
+ * A pointer commits when released. The keyboard commits after a short idle instead: each arrow key is
+ * a step, and a seek per press would re-buffer the track for everyone in the channel once for each.
  */
 function HeldRange({
   value,
@@ -76,6 +77,10 @@ function HeldRange({
   ariaLabel,
   resetKey,
   style,
+  step,
+  valueText,
+  disabled = false,
+  title,
 }: {
   value: number;
   max: number;
@@ -83,19 +88,46 @@ function HeldRange({
   ariaLabel: string;
   resetKey?: number;
   style?: CSSProperties;
+  /** Greyed and inert, as the buttons are when the control is not allowed or there is no connection. */
+  disabled?: boolean;
+  title?: string;
+  /** One arrow key's worth. The default of 1 suits a 0-100 volume; a position in milliseconds needs more. */
+  step?: number;
+  /** What a screen reader says for a value, where the number alone is not it (a position in ms). */
+  valueText?: (value: number) => string;
 }) {
   const [held, setHeld] = useState<number | null>(null);
+  // From pointer down to release: a broadcast that arrives meanwhile must not take the thumb back from
+  // the finger, or releasing would find nothing held and send no seek.
+  const [dragging, setDragging] = useState(false);
+  const viaKeyboard = useRef(false);
+  // Read when the idle timer fires, so a parent re-rendering with a new callback does not restart it.
+  const onCommitRef = useRef(onCommit);
+  useEffect(() => {
+    onCommitRef.current = onCommit;
+  }, [onCommit]);
+
+  useEffect(() => {
+    if (held === null || !viaKeyboard.current) return;
+    const id = setTimeout(() => {
+      viaKeyboard.current = false;
+      onCommitRef.current(held);
+      if (resetKey === undefined) setHeld(null);
+    }, KEY_COMMIT_IDLE_MS);
+    return () => clearTimeout(id);
+  }, [held, resetKey]);
 
   // Drop a held value when the key changes. Adjusted during render rather than in an effect, as React
   // recommends for state derived from a prop: an effect would render once with the stale value first.
   const [seenKey, setSeenKey] = useState(resetKey);
   if (seenKey !== resetKey) {
     setSeenKey(resetKey);
-    setHeld(null);
+    if (!dragging) setHeld(null);
   }
 
   const shown = held ?? value;
   const commit = () => {
+    setDragging(false);
     if (held !== null) {
       onCommit(held);
       if (resetKey === undefined) setHeld(null);
@@ -110,17 +142,35 @@ function HeldRange({
       min={0}
       max={Math.max(max, 1)}
       value={shown}
+      step={step}
       onChange={(e) => setHeld(Number(e.target.value))}
+      onPointerDown={(e) => {
+        viaKeyboard.current = false;
+        setDragging(true);
+        // So the release is delivered here even when it happens outside the slider: without capture a mouse drag
+        // let go elsewhere would never commit, and the thumb would stay where the finger left it.
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          /* a synthetic or already-released pointer: the release then arrives as it always did */
+        }
+      }}
       onPointerUp={commit}
-      onKeyUp={commit}
+      onPointerCancel={() => setDragging(false)}
+      onKeyDown={() => {
+        viaKeyboard.current = true;
+      }}
       aria-label={ariaLabel}
+      aria-valuetext={valueText?.(shown)}
+      disabled={disabled}
+      title={title}
     />
   );
 }
 
 /**
  * Matches the floor the server keeps between actions that post to the channel
- * (`ActivityServer`'s `ANNOUNCED_COOLDOWN_MS`).
+ * (`ANNOUNCED_COOLDOWN_MS` in `src/presentation/http/constants.js`).
  *
  * The server is the real gate — a client can send whatever it likes. This exists so the second
  * press of a button shows as a button that is busy, rather than coming back as "Slow down a
@@ -128,7 +178,7 @@ function HeldRange({
  */
 const CONTROL_COOLDOWN_MS = 2_000;
 
-function useControlCooldown(ms = CONTROL_COOLDOWN_MS) {
+export function useControlCooldown(ms = CONTROL_COOLDOWN_MS) {
   const [until, setUntil] = useState(0);
 
   useEffect(() => {
@@ -159,10 +209,12 @@ function useControlCooldown(ms = CONTROL_COOLDOWN_MS) {
  */
 export function Transport({
   state,
+  track,
   art,
   live = true,
   canControl: canControlHint,
   noticeAt,
+  cooldown,
   onSeek,
   onTogglePlay,
   onPrevious,
@@ -172,11 +224,15 @@ export function Transport({
   onLoop,
 }: {
   state: PlaybackState;
+  /** The track that is playing: the caller has already checked there is one. */
+  track: Track;
   art: string | null;
   /** False while the connection is down: position frozen, every control disabled. */
   live?: boolean;
   canControl: boolean;
   noticeAt: number;
+  /** One cooldown for every control that posts to the channel, the queue rows' jump included (`useControlCooldown()`). */
+  cooldown: ReturnType<typeof useControlCooldown>;
   onSeek: (ms: number) => void;
   onTogglePlay: () => void;
   onPrevious: () => void;
@@ -185,13 +241,10 @@ export function Transport({
   onShuffle: () => void;
   onLoop: () => void;
 }) {
-  const position = useLivePosition(state, live);
-  const track = state.track!;
-  const length = track.lengthMs ?? 0;
   const paused = Boolean(state.paused);
   const repeatMode = state.repeatMode ?? "off";
   const canControl = live && canControlHint;
-  const { cooling, guard } = useControlCooldown();
+  const { cooling, guard } = cooldown;
   // Pressable right now: DJ rights, a live connection, and no cooldown running.
   const ready = canControl && !cooling;
   // Skip is the one control a non-DJ may press — it falls through to the same vote `/skip` runs.
@@ -221,21 +274,10 @@ export function Transport({
 
   return (
     <footer className="vibe-transport">
-      {/* Progress as a hairline pinned to the top edge of the bar. Narrow frames have no room
-          for a labelled scrubber, but losing progress entirely would be worse. */}
-      {!track.isStream && (
-        <div style={S.transportHairline} className="vibe-hairline" aria-hidden="true">
-          <div
-            style={{
-              ...S.transportHairlineFill,
-              width: `${length > 0 ? Math.min((position / length) * 100, 100) : 0}%`,
-            }}
-          />
-        </div>
-      )}
+      {!track.isStream && <Hairline state={state} track={track} live={live} />}
 
       <div className="vibe-transport-meta">
-        <TransportArt src={art} />
+        <TransportArt key={art ?? "none"} src={art} />
         <div style={S.transportText}>
           <span style={S.transportTitle}>{track.title ?? "Unknown track"}</span>
           {track.author && <span style={S.transportAuthor}>{track.author}</span>}
@@ -299,21 +341,15 @@ export function Transport({
         {track.isStream ? (
           <span style={S.transportLive}>Live stream</span>
         ) : (
-          <div className="vibe-transport-scrub">
-            <span style={S.transportTime}>{formatDuration(Math.min(position, length))}</span>
-            <HeldRange
-              value={Math.min(position, length)}
-              max={length}
-              onCommit={onSeek}
-              // Combines two independent, monotonic sources into one key: a normal state
-              // broadcast (sampledAt) and a rejected control (noticeAt) — see noticeAt's own
-              // comment. Either one changing must let go of the dragged value; adding them is
-              // enough since both only ever increase, so the sum only ever increases too.
-              resetKey={state.sampledAt + noticeAt}
-              ariaLabel="Seek"
-            />
-            <span style={S.transportTime}>{formatDuration(length)}</span>
-          </div>
+          <Scrubber
+            state={state}
+            track={track}
+            live={live}
+            canControl={canControl}
+            noticeAt={noticeAt}
+            title={djTitle}
+            onSeek={onSeek}
+          />
         )}
       </div>
 
@@ -325,9 +361,77 @@ export function Transport({
           onCommit={onVolume}
           ariaLabel="Volume"
           style={{ maxWidth: 120 }}
+          disabled={!canControl}
+          title={djTitle}
         />
       </div>
     </footer>
+  );
+}
+
+/**
+ * Progress as a hairline pinned to the top edge of the bar. Narrow frames have no room for a labelled scrubber, but
+ * losing progress entirely would be worse. Owns the live position, so its tick re-renders this and not the bar.
+ */
+function Hairline({ state, track, live }: { state: PlaybackState; track: Track; live: boolean }) {
+  const position = useLivePosition(state, live);
+  const length = track.lengthMs ?? 0;
+
+  return (
+    <div style={S.transportHairline} className="vibe-hairline" aria-hidden="true">
+      <div
+        style={{
+          ...S.transportHairlineFill,
+          width: `${length > 0 ? Math.min((position / length) * 100, 100) : 0}%`,
+        }}
+      />
+    </div>
+  );
+}
+
+/** The two times and the seek slider. Owns the live position, so its 500 ms tick does not re-render the buttons. */
+function Scrubber({
+  state,
+  track,
+  live,
+  canControl,
+  noticeAt,
+  title,
+  onSeek,
+}: {
+  state: PlaybackState;
+  track: Track;
+  live: boolean;
+  canControl: boolean;
+  noticeAt: number;
+  title: string | undefined;
+  onSeek: (ms: number) => void;
+}) {
+  const position = useLivePosition(state, live);
+  const length = track.lengthMs ?? 0;
+
+  return (
+    <div className="vibe-transport-scrub">
+      <span style={S.transportTime}>{formatDuration(Math.min(position, length))}</span>
+      <HeldRange
+        value={Math.min(position, length)}
+        max={length}
+        onCommit={onSeek}
+        // Combines two independent, monotonic sources into one key: a normal state
+        // broadcast (sampledAt) and a rejected control (noticeAt) — see noticeAt's own
+        // comment. Either one changing must let go of the dragged value; adding them is
+        // enough since both only ever increase, so the sum only ever increases too.
+        resetKey={state.sampledAt + noticeAt}
+        ariaLabel="Seek"
+        disabled={!canControl}
+        title={title}
+        // A percent of the track, never less than a second: a millisecond per arrow key was a
+        // re-buffer for the room per press, for no audible movement.
+        step={Math.max(1_000, Math.round(length / 100))}
+        valueText={(ms) => `${formatDuration(ms)} of ${formatDuration(length)}`}
+      />
+      <span style={S.transportTime}>{formatDuration(length)}</span>
+    </div>
   );
 }
 

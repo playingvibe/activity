@@ -4,8 +4,8 @@ import type { ActivitySync, PlaybackState, Track } from "./useActivitySync";
  * A fixture standing in for a live sync connection, used only by App.tsx's `?mock=1` preview.
  *
  * The Activity cannot render past its loading state outside Discord — it needs the SDK
- * handshake params that only a real Activity session provides — which historically made the
- * UI impossible to look at, let alone iterate on, without deploying and launching it in a
+ * handshake params that only a real Activity session provides — which makes the
+ * UI impossible to look at without deploying and launching it in a
  * voice channel. This fixture removes that: `?mock=1` renders the full player against static
  * data in any browser, so layout and styling work needs no Discord, no bot, and no tunnel.
  *
@@ -59,6 +59,7 @@ const MOCK_STATE: PlaybackState = {
   // useLivePosition extrapolates position from this sample, so it has to be a real "now" —
   // a fixed 0 would put the sample at the epoch and peg the progress bar at the track's end.
   sampledAt: Date.now(),
+  receivedAt: Date.now(),
   volume: 70,
   repeatMode: "off",
   track: track("Never Gonna Give You Up", "Rick Astley", 213_000, "mara"),
@@ -92,11 +93,14 @@ export const MOCK_SYNC: ActivitySync = {
   // uses into every screenshot and every recorded GIF.
   prefs: null,
   profile: {
-    stats: { totalListeningTime: 227 * 60 * 60 * 1000, currentStreak: 12, longestStreak: 31, sessionCount: 1840 },
-    level: { level: 9, progress: 0.42, remainingMs: 14 * 60 * 60 * 1000 + 20 * 60 * 1000 },
+    // What the bot's own rules give for these stats (`getLevel` and `getEarnedBadgeTiers`: level 28, 30% in,
+    // 10 h 48 min to go; 227 h is Gold Listener and 640 tracks is Gold Collector), and the same numbers
+    // `scripts/assets/render-rank-card.js` draws, so the listing never shows two different profiles.
+    stats: { totalListeningTime: 227 * 60 * 60 * 1000, currentStreak: 12, longestStreak: 31, sessionCount: 640 },
+    level: { level: 28, progress: 0.3, remainingMs: 10 * 60 * 60 * 1000 + 48 * 60 * 1000 },
     badges: [
-      { name: "Gold Listener", color: "#d9b15c" },
-      { name: "Silver Collector", color: "#b8bcc4" },
+      { name: "Gold Listener", color: "#F5C542" },
+      { name: "Gold Collector", color: "#F5C542" },
     ],
     plan: null,
   },
@@ -130,6 +134,7 @@ export const MOCK_SYNC: ActivitySync = {
   capabilities: { canControl: true },
   send: noop,
   boost: noop,
+  jump: noop,
   requestProfile: noop,
   requestGuildContext: noop,
 };

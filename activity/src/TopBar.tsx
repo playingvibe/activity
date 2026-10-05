@@ -35,6 +35,7 @@ export function TopBar({
           <button
             className="vibe-icon-btn"
             style={S.topBarBtn}
+            id="vibe-open-settings"
             onClick={() => onOpen("settings")}
             aria-label="Settings"
           >
@@ -44,6 +45,7 @@ export function TopBar({
         <button
           className="vibe-icon-btn"
           style={S.topBarBtn}
+          id="vibe-open-profile"
           onClick={() => onOpen("profile")}
           aria-label="Your profile"
         >

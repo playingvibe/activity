@@ -4,7 +4,7 @@
  * responsive layout, @font-face, and @keyframes. Everything static stays in `playerStyles.ts`,
  * which documents the split in full — read that before adding a rule to either file.
  *
- * Four elements deliberately live in both: `.vibe-play-btn`, `.vibe-skip-btn`, `.vibe-queue` and
+ * Three elements deliberately live in both: `.vibe-play-btn`, `.vibe-skip-btn` and
  * `.vibe-queue-row` take their static base from `playerStyles.ts` and their hover/breakpoint
  * behaviour from here. Editing one of those means checking both.
  *
@@ -117,13 +117,8 @@ body {
   z-index: 0;
   pointer-events: none;
   /*
-   * A flat vertical fade, not a radial glow.
-   *
-   * The previous version was two stacked accent ellipses, and it had two problems that turned
-   * out to be the same problem: it read as a visible *circle* rather than ambient light, and
-   * spreading a near-maximum-saturation accent across most of the frame is thousands of
-   * strongly coloured pixels — which is what made the whole app feel neon rather than
-   * designed. Both complaints were about area, not about the hex values.
+   * A flat vertical fade, not a radial glow: a shaped glow reads as a circle, and spreading a
+   * near-maximum-saturation accent across most of the frame makes the whole app feel neon.
    *
    * This carries the instance's tone with no shape at all: the accent at a low alpha along the
    * very top edge, gone by ~40% of the height, plus a whisper across the whole surface so the
@@ -155,9 +150,11 @@ body {
  *    allowance below is empirical, measured off a real mobile session where the top bar was
  *    rendering underneath those buttons.
  *
- * Desktop keeps a zero allowance: there the Activity gets its own panel with Discord's chrome
- * above it, not on top of it. The platform comes from Discord's own query param, stamped onto
- * <html> in main.tsx, rather than from a width guess — a narrow desktop panel is not a phone.
+ * The top allowance is mobile only: on desktop the Activity gets its own panel with Discord's chrome
+ * above it, not on top of it, so it stays zero. The bottom control bar is the exception, drawn over the
+ * frame on desktop too (`--vibe-discord-chrome-bottom` below). The platform comes from Discord's own
+ * query param, stamped onto <html> in main.tsx, rather than from a width guess — a narrow desktop panel
+ * is not a phone.
  */
 :root {
   --vibe-safe-top: env(safe-area-inset-top, 0px);
@@ -169,21 +166,20 @@ body {
    * Discord's *bottom* control bar — users, hide/show chat, minimise, exit — which it draws
    * **over** the frame rather than beneath it, on desktop as well as mobile.
    *
-   * The note above claimed desktop needed no allowance because "the Activity gets its own panel
-   * with Discord's chrome above it, not on top of it". That is wrong, and was reported live: in
-   * Settings with the chat panel open, the last row sat underneath those buttons. Worse, it could
-   * not be scrolled to, because the frame does not overflow — the content genuinely fits the
-   * iframe, it is just covered.
+   * Desktop needs it as much as mobile: with the chat panel open, Settings' last row sat underneath
+   * those buttons. The padding only reached views narrower than 900px at first, because `.vibe-body`'s
+   * wide-frame block reset `overflow` and `padding-bottom` on the solo views too (see
+   * `.vibe-body:not(.vibe-body--solo)` in the 900px block below); that block now leaves them alone.
    *
    * Applied to the solo views only, deliberately: they are the ones with no transport bar, so
    * their content runs all the way to the frame's bottom edge. In the player view the transport
    * already occupies that band.
    *
-   * **It has to be tall enough.** The bar holds member avatars, hide/show chat, minimise and exit, and sits inset from the bottom edge rather
-   * than flush against it, so the band to clear is the control height *plus* its margin. 96px is
-   * deliberately more than a measurement strictly needs, because being slightly generous costs a
-   * little empty space at the bottom of a scroll while being slightly short costs a control nobody
-   * can reach.
+   * **It has to be tall enough.** The bar holds member avatars, hide/show chat, minimise and exit, and
+   * sits inset from the bottom edge rather than flush against it, so the band to clear is the control
+   * height *plus* its margin. 96px is more than a measurement strictly needs: being slightly generous
+   * costs a little empty space at the bottom of a scroll, while being slightly short costs a control
+   * nobody can reach.
    *
    * If it needs retuning, this one property is the only thing to change.
    */
@@ -255,12 +251,10 @@ body {
  * ≥900px breakpoint, where .vibe-body--solo would otherwise only narrow the column. Declared as
  * flex rather than leaning on grid's align-content/margin:auto centering trick: at ≥900px
  * .vibe-body itself sets `align-content: stretch` (for the two-column queue-open layout, see
- * below), and since .vibe-body--solo never reset that back to `start`, every solo view
- * inherited it too — with two children present (CenterMessage + a rejected-control Notice)
- * each implicit grid row stretched to fill its own share of the leftover height, so the Notice
- * (a plain <p>, no self-centering of its own) rendered as a near-full-height block instead of
- * a small banner. Reported live from a real disconnect/reconnect. Flex sidesteps the whole
- * class of bug: `justify-content: center` centers the children as one group on the main axis,
+ * below), which a solo view with two children (CenterMessage + a rejected-control Notice) would
+ * inherit, stretching each implicit grid row so the Notice rendered as a near-full-height block
+ * instead of a small banner. Flex centres the children as one group:
+ * `justify-content: center` centers them on the main axis,
  * `align-items` is left at its default `stretch` deliberately — Profile/Settings (also
  * .vibe-body--solo) rely on filling the full column width, which the grid gives them
  * for free, and a plain `<p>`/`<div>` stretched horizontally with `textAlign: center` inside
@@ -392,12 +386,11 @@ body {
   }
 
   /*
-   * **Only the two-column player gets these, never a solo view.** They were on `.vibe-body`, and
-   * because `.vibe-body` and `.vibe-body--solo` are both one class, source order decided — and this
-   * block comes later. So at 900px and wider every solo view (Settings, Profile, connecting) lost
-   * its `overflow-y: auto` and its Discord-chrome padding: it could not scroll at all, and its last
-   * rows sat unreachable under Discord's controls. That is why raising the padding from 56px to
-   * 96px changed nothing: at this width the padding was never applied.
+   * **Only the two-column player gets these, never a solo view**, so they are scoped with
+   * `:not(.vibe-body--solo)`. `.vibe-body` and `.vibe-body--solo` are one class each, so source order decides, and
+   * this block comes later: on `.vibe-body` alone, every solo view (Settings, Profile, connecting) would lose its
+   * `overflow-y: auto` and its Discord-chrome padding at 900px and wider, and its last rows would sit
+   * unreachable under Discord's controls.
    */
   .vibe-body:not(.vibe-body--solo) {
     overflow: hidden;
@@ -409,11 +402,8 @@ body {
    * this, not just the folded player: Profile, Settings, and the connecting/error states all
    * render into `.vibe-body`, but the two-column rule above still reserves the second ~360px
    * track regardless of what's actually inside it. Without a cap, a lone child would stretch
-   * across that full reclaimed width instead of reading as a single, deliberate column —
-   * originally written for just the folded player (the stage centred inside its own 800px pane
-   * is *not* the centre of the frame otherwise), but every solo view needs the same cap, not
-   * just a special case of the queue toggle. Centering itself is handled unconditionally by the
-   * base `.vibe-body--solo` rule above, not here.
+   * across that full reclaimed width instead of reading as a single, deliberate column.
+   * Centering itself is handled unconditionally by the base `.vibe-body--solo` rule above, not here.
    */
   .vibe-body--solo {
     max-width: 900px;
@@ -605,9 +595,9 @@ body {
      var(--vibe-accent), and Chromium does not restart a transition when a custom property
      changes — the element keeps its previously-resolved colour indefinitely, so a theme
      change leaves the play button painted in the old instance's accent. Harmless in
-     production (the palette is fixed per instance and never changes at runtime) but it
-     defeats the ?dev=1 palette picker, which exists precisely to compare them. Hover colour
-     changing instantly reads as crisper here anyway. */
+     production (the palette is fixed per instance and never changes at runtime), but a palette
+     swapped by hand while looking at it would not repaint. Hover colour changing instantly reads
+     as crisper here anyway. */
   transition: transform 120ms ease, opacity 120ms ease;
 }
 
@@ -687,37 +677,10 @@ body {
   background: var(--vibe-surface-hover);
 }
 
-.vibe-select {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  box-sizing: border-box;
-  background-color: rgba(255, 255, 255, 0.06);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f5f2f3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.7rem center;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 0.55rem 2rem 0.55rem 0.7rem;
-  color: #f5f2f3;
-  font-family: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: border-color 120ms ease;
-}
-
-.vibe-select:hover {
-  border-color: rgba(255, 255, 255, 0.22);
-}
-
-.vibe-select:focus-visible {
-  outline: none;
-  border-color: var(--vibe-accent);
-}
-
-.vibe-select option {
-  background: #17171a;
-  color: #f5f2f3;
+.vibe-queue-play:focus-visible {
+  outline: 2px solid var(--vibe-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 /*
@@ -740,7 +703,7 @@ body {
 /* The same curve the card draws, sampled from the renderer's own three-summed-sines formula, so
    "Waves" is one shape across both surfaces rather than two that merely resemble each other. */
 .vibe-backdrop--waves {
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20900%20320'%20preserveAspectRatio%3D'none'%3E%3Cpath%20d%3D'M-20.0%20270.2%20L-4.3%20271.7%20L11.3%20272.7%20L27.0%20273.4%20L42.7%20273.6%20L58.3%20273.4%20L74.0%20272.9%20L89.7%20272.0%20L105.3%20270.9%20L121.0%20269.6%20L136.7%20268.1%20L152.3%20266.4%20L168.0%20264.8%20L183.7%20263.1%20L199.3%20261.5%20L215.0%20260.0%20L230.7%20258.5%20L246.3%20257.3%20L262.0%20256.1%20L277.7%20255.1%20L293.3%20254.3%20L309.0%20253.6%20L324.7%20253.0%20L340.3%20252.5%20L356.0%20252.1%20L371.7%20251.6%20L387.3%20251.2%20L403.0%20250.6%20L418.7%20250.0%20L434.3%20249.3%20L450.0%20248.3%20L465.7%20247.2%20L481.3%20245.9%20L497.0%20244.4%20L512.7%20242.6%20L528.3%20240.7%20L544.0%20238.6%20L559.7%20236.3%20L575.3%20233.9%20L591.0%20231.5%20L606.7%20229.0%20L622.3%20226.6%20L638.0%20224.3%20L653.7%20222.1%20L669.3%20220.2%20L685.0%20218.5%20L700.7%20217.1%20L716.3%20216.1%20L732.0%20215.5%20L747.7%20215.3%20L763.3%20215.6%20L779.0%20216.3%20L794.7%20217.4%20L810.3%20218.9%20L826.0%20220.7%20L841.7%20223.0%20L857.3%20225.5%20L873.0%20228.2%20L888.7%20231.1%20L904.3%20234.1%20L920.0%20237.1'%20fill%3D'none'%20stroke%3D'%23ffffff'%20stroke-opacity%3D'0.5'%20stroke-width%3D'2.5'%20stroke-linecap%3D'round'%2F%3E%3Cpath%20d%3D'M-20.0%20277.0%20L-4.3%20275.6%20L11.3%20274.3%20L27.0%20273.2%20L42.7%20272.2%20L58.3%20271.3%20L74.0%20270.6%20L89.7%20270.0%20L105.3%20269.5%20L121.0%20269.0%20L136.7%20268.7%20L152.3%20268.3%20L168.0%20267.9%20L183.7%20267.5%20L199.3%20267.0%20L215.0%20266.5%20L230.7%20265.9%20L246.3%20265.1%20L262.0%20264.3%20L277.7%20263.4%20L293.3%20262.3%20L309.0%20261.2%20L324.7%20260.0%20L340.3%20258.8%20L356.0%20257.5%20L371.7%20256.3%20L387.3%20255.2%20L403.0%20254.1%20L418.7%20253.1%20L434.3%20252.3%20L450.0%20251.7%20L465.7%20251.3%20L481.3%20251.1%20L497.0%20251.2%20L512.7%20251.6%20L528.3%20252.2%20L544.0%20253.1%20L559.7%20254.2%20L575.3%20255.6%20L591.0%20257.2%20L606.7%20259.0%20L622.3%20260.9%20L638.0%20262.9%20L653.7%20264.9%20L669.3%20267.0%20L685.0%20269.0%20L700.7%20271.0%20L716.3%20272.9%20L732.0%20274.5%20L747.7%20276.0%20L763.3%20277.3%20L779.0%20278.3%20L794.7%20279.1%20L810.3%20279.6%20L826.0%20279.9%20L841.7%20279.8%20L857.3%20279.6%20L873.0%20279.1%20L888.7%20278.4%20L904.3%20277.5%20L920.0%20276.5'%20fill%3D'none'%20stroke%3D'%23ffffff'%20stroke-opacity%3D'0.28'%20stroke-width%3D'1.8'%20stroke-linecap%3D'round'%2F%3E%3C%2Fsvg%3E");
+  background-image: url("./backdrops/waves.svg");
   /* **Clear of the transport bar, not anchored to the bottom.** Anchored at `bottom`, the pinned
      transport (roughly 5.5rem tall including the safe-area inset) would cover the curves almost
      entirely and the setting would appear to do nothing. The band is inset from the bottom by
@@ -759,7 +722,7 @@ body {
 .vibe-backdrop--marks {
   /* Inlined rather than referenced: the Activity build has no `public/` directory, so a root-path
      asset would simply 404 and the style would silently do nothing. */
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'376%20344%20544%20606'%3E%3Cpath%20d%3D'M%20877%20349%20L%20858%20344%20L%20835%20344%20L%20817%20348%20L%20792%20361%20L%20773%20379%20L%20765%20390%20L%20754%20410%20L%20666%20623%20L%20653%20646%20L%20646%20653%20L%20641%20655%20L%20632%20653%20L%20624%20643%20L%20620%20634%20L%20550%20415%20L%20538%20390%20L%20527%20377%20L%20518%20370%20L%20506%20364%20L%20490%20360%20L%20464%20360%20L%20449%20363%20L%20424%20373%20L%20406%20385%20L%20392%20399%20L%20380%20419%20L%20376%20434%20L%20376%20452%20L%20379%20465%20L%20409%20537%20L%20436%20608%20L%20536%20884%20L%20548%20909%20L%20563%20930%20L%20575%20940%20L%20589%20947%20L%20608%20950%20L%20626%20948%20L%20650%20938%20L%20669%20925%20L%20690%20904%20L%20705%20885%20L%20731%20843%20L%20753%20799%20L%20910%20457%20L%20917%20439%20L%20920%20424%20L%20920%20404%20L%20916%20388%20L%20905%20369%20L%20892%20357%20Z'%20fill%3D'%23ffffff'%2F%3E%3C%2Fsvg%3E");
+  background-image: url("./backdrops/marks.svg");
   background-size: 78px 78px;
   background-repeat: space;
   opacity: 0.035;
@@ -775,7 +738,7 @@ body {
 /* The same 46 bars the card draws, sampled from its own hash — not a repeating gradient, which
    at any size reads as hatching rather than as an equaliser. */
 .vibe-backdrop--bars {
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20900%20320%27%20preserveAspectRatio%3D%27none%27%3E%3Crect%20x%3D%270%27%20y%3D%27304%27%20width%3D%2715%27%20height%3D%2716%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%2720%27%20y%3D%27207%27%20width%3D%2715%27%20height%3D%27113%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%2739%27%20y%3D%27298%27%20width%3D%2715%27%20height%3D%2722%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%2759%27%20y%3D%27245%27%20width%3D%2715%27%20height%3D%2775%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%2779%27%20y%3D%27265%27%20width%3D%2715%27%20height%3D%2755%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%2798%27%20y%3D%27256%27%20width%3D%2715%27%20height%3D%2764%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27118%27%20y%3D%27238%27%20width%3D%2715%27%20height%3D%2782%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27138%27%20y%3D%27287%27%20width%3D%2715%27%20height%3D%2733%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27157%27%20y%3D%27269%27%20width%3D%2715%27%20height%3D%2751%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27177%27%20y%3D%27247%27%20width%3D%2715%27%20height%3D%2773%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27197%27%20y%3D%27201%27%20width%3D%2715%27%20height%3D%27119%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27216%27%20y%3D%27217%27%20width%3D%2715%27%20height%3D%27103%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27236%27%20y%3D%27285%27%20width%3D%2715%27%20height%3D%2735%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27256%27%20y%3D%27199%27%20width%3D%2715%27%20height%3D%27121%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27275%27%20y%3D%27218%27%20width%3D%2715%27%20height%3D%27102%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27295%27%20y%3D%27257%27%20width%3D%2715%27%20height%3D%2763%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27315%27%20y%3D%27206%27%20width%3D%2715%27%20height%3D%27114%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27334%27%20y%3D%27258%27%20width%3D%2715%27%20height%3D%2762%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27354%27%20y%3D%27236%27%20width%3D%2715%27%20height%3D%2784%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27374%27%20y%3D%27270%27%20width%3D%2715%27%20height%3D%2750%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27393%27%20y%3D%27224%27%20width%3D%2715%27%20height%3D%2796%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27413%27%20y%3D%27245%27%20width%3D%2715%27%20height%3D%2775%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27433%27%20y%3D%27234%27%20width%3D%2715%27%20height%3D%2786%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27453%27%20y%3D%27260%27%20width%3D%2715%27%20height%3D%2760%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27472%27%20y%3D%27290%27%20width%3D%2715%27%20height%3D%2730%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27492%27%20y%3D%27269%27%20width%3D%2715%27%20height%3D%2751%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27512%27%20y%3D%27252%27%20width%3D%2715%27%20height%3D%2768%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27531%27%20y%3D%27304%27%20width%3D%2715%27%20height%3D%2716%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27551%27%20y%3D%27287%27%20width%3D%2715%27%20height%3D%2733%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27571%27%20y%3D%27260%27%20width%3D%2715%27%20height%3D%2760%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27590%27%20y%3D%27200%27%20width%3D%2715%27%20height%3D%27120%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27610%27%20y%3D%27228%27%20width%3D%2715%27%20height%3D%2792%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27630%27%20y%3D%27274%27%20width%3D%2715%27%20height%3D%2746%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27649%27%20y%3D%27260%27%20width%3D%2715%27%20height%3D%2760%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27669%27%20y%3D%27283%27%20width%3D%2715%27%20height%3D%2737%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27689%27%20y%3D%27243%27%20width%3D%2715%27%20height%3D%2777%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27708%27%20y%3D%27200%27%20width%3D%2715%27%20height%3D%27120%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27728%27%20y%3D%27207%27%20width%3D%2715%27%20height%3D%27113%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27748%27%20y%3D%27254%27%20width%3D%2715%27%20height%3D%2766%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27767%27%20y%3D%27223%27%20width%3D%2715%27%20height%3D%2797%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27787%27%20y%3D%27241%27%20width%3D%2715%27%20height%3D%2779%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27807%27%20y%3D%27205%27%20width%3D%2715%27%20height%3D%27115%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27826%27%20y%3D%27256%27%20width%3D%2715%27%20height%3D%2764%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27846%27%20y%3D%27281%27%20width%3D%2715%27%20height%3D%2739%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27866%27%20y%3D%27231%27%20width%3D%2715%27%20height%3D%2789%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3Crect%20x%3D%27885%27%20y%3D%27220%27%20width%3D%2715%27%20height%3D%27100%27%20rx%3D%277%27%20fill%3D%27rgba(255%2C255%2C255%2C0.5)%27%2F%3E%3C%2Fsvg%3E");
+  background-image: url("./backdrops/bars.svg");
   /* **On a floor, unlike the waves, and deliberately so** — but the floor is the top of the transport
      bar, not the bottom of the frame. The waves float clear of the transport because a curve has no
      baseline and is read whole. An equaliser has one: every bar ends on the same edge, so a floating band
@@ -1084,8 +1047,8 @@ body {
  *
  * The standard formulation: collapse durations rather than removing the rules, so a transition that
  * something depends on still *completes* — it just completes immediately. `!important` because these
- * have to beat the inline `transition` styles in `Settings.tsx`, which a stylesheet cannot otherwise
- * reach.
+ * have to beat any more specific rule that sets a duration, and an inline style if one is ever added,
+ * which a media query alone would not outrank.
  */
 @media (prefers-reduced-motion: reduce) {
   *,

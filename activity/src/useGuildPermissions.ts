@@ -15,7 +15,6 @@ import { getDiscordSdk } from "./discord";
  *   authorize + token exchange, authenticate()) has finished — getChannelPermissions() rejects
  *   with "Not authenticated or invalid scope" (RPC error 4006) if called any earlier, so this
  *   must wait for the same milestone useActivitySync itself reaches before opening the socket.
- *   Confirmed via a live "4006 · Not authenticated or invalid scope" error, not assumed.
  */
 export function useCanManageGuild(authenticated: boolean): boolean {
   const [canManage, setCanManage] = useState(false);

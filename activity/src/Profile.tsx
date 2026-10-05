@@ -1,19 +1,28 @@
-import { useEffect, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import { useActivitySync, type ProfileBadge, type ProfileLevel } from "./useActivitySync";
 import { BackIcon } from "./icons";
 
 type Props = {
-  sync: Pick<ReturnType<typeof useActivitySync>, "identity" | "profile" | "requestProfile">;
+  sync: Pick<ReturnType<typeof useActivitySync>, "identity" | "profile" | "requestProfile" | "notice" | "status">;
   onBack: () => void;
 };
 
 /** A user's own identity + listening stats. Requested fresh every time the panel opens. */
 export default function Profile({ sync, onBack }: Props) {
-  const { identity, profile, requestProfile } = sync;
+  const { identity, profile, requestProfile, notice, status } = sync;
+  const live = status.phase === "ready";
+  const heading = useRef<HTMLHeadingElement>(null);
 
+  // Asked again whenever the connection comes back: a request sent while it was down was dropped, and
+  // nothing else would ever repeat it.
   useEffect(() => {
     requestProfile();
-  }, [requestProfile]);
+  }, [requestProfile, live]);
+
+  // Moving here replaced the whole screen, so the button that was focused is gone: start at the heading.
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
 
   return (
     <div style={S.panel} className="vibe-fade-in">
@@ -29,7 +38,9 @@ export default function Profile({ sync, onBack }: Props) {
             {(identity?.globalName ?? identity?.username ?? "?").slice(0, 1).toUpperCase()}
           </div>
         )}
-        <h1 style={S.name}>{identity?.globalName ?? identity?.username ?? "…"}</h1>
+        <h1 ref={heading} tabIndex={-1} style={S.name}>
+          {identity?.globalName ?? identity?.username ?? "…"}
+        </h1>
         {identity?.globalName && <p style={S.handle}>@{identity.username}</p>}
       </div>
 
@@ -49,7 +60,7 @@ export default function Profile({ sync, onBack }: Props) {
               premium yet. This is the reserved spot for it, not a fallback UI to design around. */}
         </div>
       ) : (
-        <p style={S.loading}>Loading stats…</p>
+        <p style={S.loading}>{notice ?? (live ? "Loading stats…" : "Waiting for Vibe to reconnect…")}</p>
       )}
     </div>
   );

@@ -24,8 +24,8 @@ export function resolveClientId(): string | null {
   const fromEnv = import.meta.env.VITE_DISCORD_CLIENT_ID;
   if (fromEnv) return fromEnv;
 
-  const [subdomain] = window.location.hostname.split(".");
-  if (/^\d{17,20}$/.test(subdomain)) return subdomain;
+  const subdomain = window.location.hostname.split(".")[0];
+  if (subdomain && /^\d{17,20}$/.test(subdomain)) return subdomain;
 
   return null;
 }
@@ -50,8 +50,7 @@ let sdk: DiscordSDK | null = null;
  * The SDK, constructed on first use rather than at import.
  *
  * Every caller is already gated behind "the connect sequence finished" or an equivalent
- * check, so in a real Activity session this is constructed during the handshake exactly as
- * before. Outside one — the `?mock=1` preview — nothing reaches it, and importing this
+ * check, so in a real Activity session this is constructed during the handshake. Outside one — the `?mock=1` preview — nothing reaches it, and importing this
  * module is harmless instead of fatal.
  */
 export function getDiscordSdk(): DiscordSDK {

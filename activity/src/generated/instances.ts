@@ -37,4 +37,4 @@ export const INSTANCE_THEMES: Record<string, Theme> = {
 };
 
 /** For any client id not listed — the same object as the flagship's entry, not a copy. */
-export const FALLBACK_THEME: Theme = INSTANCE_THEMES["815329807377498153"];
+export const FALLBACK_THEME: Theme = INSTANCE_THEMES["815329807377498153"]!;

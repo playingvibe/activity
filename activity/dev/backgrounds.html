@@ -21,13 +21,13 @@
     <h1>Activity backgrounds</h1>
     <p>
       Every background on a phone-sized and a wide frame, from the mock player. Open it with
-      <code>npm run dev</code> at <code>/dev/backgrounds.html</code>. To preview a new style, add its key
-      to the list below (it is the key in <code>src/generated/cardBackgrounds.ts</code>).
+      <code>npm run dev</code> at <code>/dev/backgrounds.html</code>. The list is
+      <code>src/generated/cardBackgrounds.ts</code>, so a new style appears here once it is added to the shared
+      list and <code>npm run sync:web</code> has run.
     </p>
     <div id="grid"></div>
-    <script>
-      // Keep in step with CARD_BACKGROUND_STYLES.
-      const KEYS = ["waves", "marks", "bars", "grid", "aurora"];
+    <script type="module">
+      import { CARD_BACKGROUND_KEYS as KEYS } from "/src/generated/cardBackgrounds.ts";
       const grid = document.getElementById("grid");
       for (const key of [null, ...KEYS]) {
         const query = "mock=1" + (key ? "&background=" + key : "");

@@ -19,8 +19,20 @@ const FALLBACK: Theme = FALLBACK_THEME;
  */
 const THEMES: Record<string, Theme> = INSTANCE_THEMES;
 
+const resolved = new Map<string, Theme>();
+
 export function resolveTheme(clientId: string): Theme {
-  return THEMES[clientId] ?? FALLBACK;
+  const known = THEMES[clientId] ?? FALLBACK;
+  let theme = resolved.get(known.accent);
+  if (!theme) {
+    // The same clamp `themeFromAccent()` gives a custom accent: the play button prints dark text on it,
+    // and the eyebrow and loop glyph print it as small text on a near-black surface. A palette whose accent
+    // already reads well comes back untouched, hand-tuned hover included.
+    const readable = ensureReadable(known.accent);
+    theme = readable === known.accent ? known : { ...known, accent: readable, accentHover: lighten(readable, 0.12) };
+    resolved.set(known.accent, theme);
+  }
+  return theme;
 }
 
 /**
@@ -29,7 +41,7 @@ export function resolveTheme(clientId: string): Theme {
  * **The hover is derived, not asked for.** Every built-in palette pairs an accent with a hand-tuned
  * hover, but a colour picker gives one value — and asking someone to choose two colours that must
  * relate correctly is asking them to do design work. Lightening in HSL by a fixed step reproduces
- * what the hand-tuned pairs already do (each `accentHover` here is its accent, lighter).
+ * what most of the hand-tuned pairs already do (their `accentHover` is the accent, lighter; Vibe Dev's goes the other way, white to a darker grey).
  *
  * **The accent is lightened until it is readable.** It can look as if no guard is needed, since
  * `player.css` only mixes the accent into surfaces at 9% and into the ambient glow at 2-9% — but
