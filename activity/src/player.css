@@ -609,6 +609,24 @@ body {
   transform: scale(0.94);
 }
 
+/* Repeat is on, in either mode: a dot under the button, the way Spotify marks it. The icon is only
+   tinted otherwise, which reads as "off" at a glance; track repeat adds its "1" on top. */
+.vibe-loop-btn {
+  position: relative;
+}
+
+.vibe-loop-btn:not([data-mode="off"])::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--vibe-accent);
+}
+
 .vibe-play-btn {
   border-radius: 999px;
   background: var(--vibe-accent);

@@ -43,6 +43,25 @@ export function Artwork({ src, accent }: { src: string | null; accent: string })
   );
 }
 
+/** What a screen reader is told when the song changes. */
+export function trackAnnouncement(track: Track): string {
+  return `Now playing: ${track.title ?? "Unknown track"}${track.author ? ` by ${track.author}` : ""}`;
+}
+
+/**
+ * The song change, for a screen reader. The title on screen updates silently, so a listener who is not looking
+ * never learns the song changed. Polite, out of sight, and **always in the page**: a live region is announced when
+ * its text changes, and one inserted with its text already inside it often is not. Mounted with the playing view,
+ * so it stays put as the track changes under it.
+ */
+export function TrackAnnouncement({ track }: { track: Track }) {
+  return (
+    <p style={S.noticeEmpty} role="status">
+      {trackAnnouncement(track)}
+    </p>
+  );
+}
+
 export function NowPlaying({ state, track }: { state: PlaybackState; track: Track }) {
   return (
     <div style={S.meta} className="vibe-fade-in">
@@ -327,7 +346,8 @@ export function Transport({
             <SkipIcon />
           </button>
           <button
-            className="vibe-icon-btn"
+            className="vibe-icon-btn vibe-loop-btn"
+            data-mode={repeatMode}
             style={gated(loopStyle)}
             onClick={guard(onLoop)}
             disabled={!ready}

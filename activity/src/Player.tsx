@@ -10,7 +10,7 @@ import Profile from "./Profile";
 import Settings from "./Settings";
 import { Shell, CenterMessage, ConnectingState, Notice } from "./Shell";
 import { TopBar } from "./TopBar";
-import { Transport, Artwork, NowPlaying, useControlCooldown } from "./Transport";
+import { Transport, Artwork, NowPlaying, TrackAnnouncement, useControlCooldown } from "./Transport";
 import { Queue } from "./QueueRail";
 import { S } from "./playerStyles";
 import "./player.css";
@@ -209,6 +209,8 @@ function PlayingView({
         onToggleQueue={onToggleQueue}
         queueCount={state.queueLength ?? state.queue?.length ?? 0}
       />
+
+      <TrackAnnouncement track={track} />
 
       <div className={`vibe-body${showQueue ? "" : " vibe-body--solo"}`}>
         <div style={S.stage}>

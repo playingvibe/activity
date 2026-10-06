@@ -172,9 +172,9 @@ export function ShuffleIcon({ size = 16 }: IconProps) {
   );
 }
 
-/** `active` (any mode) tints via currentColor from the caller; `mode: "track"` adds a small
- * "1" badge — the same convention Spotify/Apple Music use to tell track-repeat apart from
- * queue-repeat, which the bot's own /loop command doesn't visually distinguish today. */
+/** The caller tints it via currentColor and marks "on" with a dot under the button (`.vibe-loop-btn`);
+ * `mode: "track"` adds a small "1" badge, the convention Spotify and Apple Music use to tell
+ * track repeat apart from queue repeat. */
 export function LoopIcon({ size = 16, mode }: IconProps & { mode?: "track" | "queue" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
