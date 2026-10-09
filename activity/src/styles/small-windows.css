@@ -182,7 +182,14 @@
   border-radius: 0;
 }
 
-/* The line of progress moves through the half second between two samples, as the seek bar does. */
+/*
+ * The line of progress steps twice a second, with no transition. It is resized (a width), not scaled, and not
+ * animated: the scaled, transitioning fill the other meters use showed as the empty track in the phone's minimised
+ * window, where a transformed child of a clipped box can lose its clip for a frame and a transition can wait on
+ * frames that a small window does not always draw. Two small steps a second look continuous on a line this thin,
+ * and a width is how this bar worked before the redesign.
+ */
 .vibe-hairline .vibe-meter__fill {
-  transition: transform 500ms linear;
+  transform: none;
+  transition: none;
 }

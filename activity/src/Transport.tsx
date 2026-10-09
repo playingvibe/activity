@@ -482,7 +482,7 @@ function Hairline({ state, track, live }: { state: PlaybackState; track: Track; 
 
   return (
     <div className="vibe-meter vibe-hairline" aria-hidden="true">
-      <div className="vibe-meter__fill" style={{ transform: `scaleX(${length > 0 ? Math.min(position / length, 1) : 0})` }} />
+      <div className="vibe-meter__fill" style={{ width: `${length > 0 ? Math.min((position / length) * 100, 100) : 0}%` }} />
     </div>
   );
 }
