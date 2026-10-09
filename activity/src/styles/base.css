@@ -1,0 +1,137 @@
+/*
+ * Base: fonts, the reset, the height chain, focus, and the two global media rules.
+ *
+ * The Activity only ever renders in Chromium (the desktop client and the phone webviews), so only
+ * -webkit- pseudo-elements are written, and color-mix(), :has() and container units are used freely.
+ */
+
+/* Outfit, bundled: the frame's policy allows no outside font. One variable file per subset; the split
+   by range means latin-ext is fetched only when a title needs it. SIL Open Font License, fonts/OFL.txt. */
+@font-face {
+  font-family: "Outfit";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/outfit-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Outfit";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/outfit-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/*
+ * The height chain (html, body, #root, the app) is in percentages, not 100vh: `vh` measures the
+ * frame's own reported viewport, which is not always the box the client gives it. The document never
+ * scrolls; one region inside the app does.
+ */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  overflow: hidden;
+  background: var(--ground);
+  color: var(--ink);
+  font: var(--regular) var(--step-0) / var(--leading) var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+p,
+ol {
+  margin: 0;
+  padding: 0;
+}
+h1,
+h2 {
+  font-size: inherit;
+  font-weight: var(--bold);
+}
+ol {
+  list-style: none;
+}
+img,
+svg {
+  display: block;
+}
+button,
+input {
+  font: inherit;
+  color: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+button:disabled,
+input:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent, var(--ink));
+  outline-offset: 3px;
+}
+/* A heading that receives focus when a panel opens is a place to start reading, not a control. */
+[tabindex="-1"]:focus {
+  outline: none;
+}
+
+/* In the page and announced, out of sight and out of the layout: the live regions while they are empty. */
+.vibe-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.vibe-num {
+  font-variant-numeric: tabular-nums;
+}
+.vibe-clip {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * Reduced motion. Durations collapse instead of disappearing, so anything waiting on an animation
+ * still finishes; the one endless animation (the mark while connecting) stops after one pass.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

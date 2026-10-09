@@ -1,0 +1,188 @@
+/*
+ * Small windows: the read-only layouts, where there is nothing to press and no room for a player.
+ * Last in the order, so these rules win without help. All of them leave the body and every control
+ * out, and keep what a glance needs: the strip's thumbnail, its two lines, and a line of progress.
+ *
+ * `:has(.vibe-transport)` scopes them to the playing view: a panel or "nothing is playing" renders in
+ * the same shell with no transport, and must keep its body.
+ */
+
+/*
+ * Picture-in-picture and the grid tile: small windows that are looked at and never pressed. Discord
+ * says which one it is (`layoutMode.ts` stamps `data-glance` on <html>); the window's size cannot, so
+ * a small pane that is a real one keeps its controls (the short layout in views.css). The thumbnail,
+ * the title and artist, and progress along the window's bottom edge.
+ */
+:root[data-glance]:not([data-mini]) .vibe-app:has(.vibe-transport) .vibe-body,
+:root[data-glance]:not([data-mini]) .vibe-transport > :not(.vibe-transport-meta, .vibe-hairline) {
+  display: none;
+}
+:root[data-glance]:not([data-mini]) .vibe-app:has(.vibe-transport) {
+  grid-template-rows: minmax(0, 1fr);
+  align-content: center;
+}
+:root[data-glance]:not([data-mini]) .vibe-transport {
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  align-self: center;
+  padding: 0 var(--s-5);
+  border-top: 0;
+  background: none;
+}
+:root[data-glance]:not([data-mini]) .vibe-transport-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  min-width: 0;
+}
+:root[data-glance]:not([data-mini]) .vibe-transport-meta .vibe-thumb {
+  width: 5.25rem;
+  height: 5.25rem;
+  border-radius: var(--r-2);
+}
+:root[data-glance]:not([data-mini]) .vibe-transport-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: var(--step-2);
+  line-height: var(--leading-snug);
+  white-space: normal;
+}
+:root[data-glance]:not([data-mini]) .vibe-transport-artist {
+  font-size: var(--step-0);
+}
+/* Fixed to the app, which is the window: the strip has no filter or transform that would contain it. */
+:root[data-glance]:not([data-mini]) .vibe-hairline {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
+  height: 6px;
+  border-radius: 0;
+}
+/*
+ * The backdrop's grid area is the playing view's middle row (`views.css`). These layouts have one row, so that
+ * area would be a row that does not exist and the layer would have no height: it takes the one row there is.
+ */
+:root[data-glance]:not([data-mini]) .vibe-backdrop,
+:root[data-mini] .vibe-backdrop {
+  grid-area: 1 / 1;
+}
+/* A shorter window takes the room from the thumbnail. */
+@media (max-height: 250px) {
+  :root[data-glance]:not([data-mini]) .vibe-transport-meta .vibe-thumb {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+}
+
+/*
+ * Minimised on a phone (`data-mini`, set by miniWindow.ts): a tall page of which only a square from
+ * the middle is shown. Everything is laid out inside that square, `--mini-side` on a side and
+ * `--mini-top` down, both set in pixels by the same module.
+ */
+:root[data-mini] .vibe-app:has(.vibe-transport) .vibe-body,
+:root[data-mini] .vibe-transport > :not(.vibe-transport-meta, .vibe-hairline) {
+  display: none;
+}
+:root[data-mini] .vibe-app:has(.vibe-transport) {
+  grid-template-rows: minmax(0, 1fr);
+  /* An offset, not a margin: the app is position: relative. */
+  top: var(--mini-top);
+  height: var(--mini-side);
+  padding: 0;
+}
+:root[data-mini] .vibe-transport {
+  grid-row: 1;
+  border-top: 0;
+  background: none;
+}
+:root[data-mini] .vibe-transport-meta {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Tiny: the artwork is the window, cropped to its shape; no words, no bar. */
+:root[data-mini="tiny"] .vibe-transport {
+  display: block;
+  height: 100%;
+  padding: 0;
+}
+:root[data-mini="tiny"] .vibe-transport-meta,
+:root[data-mini="tiny"] .vibe-transport-meta .vibe-thumb {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+:root[data-mini="tiny"] .vibe-transport-text,
+:root[data-mini="tiny"] .vibe-hairline {
+  display: none;
+}
+
+/*
+ * Stack: the artwork, then the title, the artist and progress along the bottom edge. Sized in `cqw`
+ * (the window's own width), because in the minimised window the viewport units did not match it.
+ * The artwork gives way first, so the words and the bar are on screen however short the window is.
+ */
+:root[data-mini="stack"] .vibe-transport {
+  /* Not positioned: the bar below is placed against the app, which is the visible square. Against this box, which
+     is centred and as tall as its content, it floated above the window's real bottom edge. */
+  position: static;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  align-self: center;
+  max-height: 100%;
+  min-height: 0;
+  padding: 6cqw;
+  overflow: hidden;
+}
+:root[data-mini="stack"] .vibe-transport-meta {
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4cqw;
+  min-height: 0;
+}
+:root[data-mini="stack"] .vibe-transport-meta .vibe-thumb {
+  flex: 0 1 auto;
+  align-self: center;
+  width: 56cqw;
+  height: 56cqw;
+  min-height: 0;
+  border-radius: 5cqw;
+}
+:root[data-mini="stack"] .vibe-transport-text {
+  flex: none;
+  justify-items: center;
+  text-align: center;
+}
+:root[data-mini="stack"] .vibe-transport-title {
+  max-width: 100%;
+  font-size: 7cqw;
+}
+:root[data-mini="stack"] .vibe-transport-artist {
+  max-width: 100%;
+  font-size: 5.2cqw;
+}
+/* The bottom edge of the visible square: absolute inside the app, which is that square. */
+:root[data-mini="stack"] .vibe-hairline {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
+  height: max(5px, 2cqw);
+  border-radius: 0;
+}
+
+/* The line of progress moves through the half second between two samples, as the seek bar does. */
+.vibe-hairline .vibe-meter__fill {
+  transition: transform 500ms linear;
+}

@@ -1,55 +1,57 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Theme } from "./theme";
 import { VibeMarkIcon } from "./icons";
-import { S } from "./playerStyles";
 
 /**
- * Full-bleed shell on a near-black base with a soft ambient glow in the instance's own
- * accent color, pinned behind independently-scrolling content.
+ * The shell every screen is drawn in: the near-black ground, the accent for this instance or this
+ * viewer, and the two layers behind the content.
  *
- * Deliberately not a blurred track-thumbnail backdrop: blurring an arbitrary, unpredictable-quality
- * image is a coin flip — a low-res or oddly-cropped thumbnail just turns to mud. A designed
- * gradient looks intentional on every track, and a near-black base is neutral enough to suit
- * every instance's accent.
+ * The glow is the instance's tone along the top of a view that has nothing else to light it
+ * (connecting, nothing playing, the panels). The playing view is lit by its cover instead (`Wash`
+ * in Transport.tsx): blurred far past the point where a low-quality thumbnail could show, and under
+ * a scrim that decides the contrast whatever the cover is.
  */
 export function Shell({
   children,
   theme,
   backdrop,
-  floored = false,
 }: {
   children: ReactNode;
   theme: Theme;
-  /** A transport bar is pinned to the bottom, so a backdrop that stands on a floor stands on its top edge. */
-  floored?: boolean;
   /** A key from `CARD_BACKGROUND_KEYS`, or null. The same vocabulary as the rank card, deliberately. */
   backdrop?: string | null;
 }) {
-  const mainStyle: CSSProperties = {
-    ...S.main,
-    // Consumed by player.css's .vibe-range / .vibe-play-btn rules and by S.eyebrow's
-    // color below, all via var(--vibe-accent) — one place decides the instance's color,
-    // everything downstream inherits it through normal CSS custom-property inheritance.
-    ["--vibe-accent" as string]: theme.accent,
-    ["--vibe-accent-hover" as string]: theme.accentHover,
-  };
+  // The one place that decides the colour: every accent token in tokens.css derives from these two.
+  const accent = { "--accent": theme.accent, "--accent-hover": theme.accentHover } as CSSProperties;
 
   return (
-    <main style={mainStyle} className="vibe-app">
-      {/* Gradient and breakpoint-dependent position both live in player.css — it has to
-          follow the artwork across the layout change, which inline styles can't express. */}
+    <main style={accent} className="vibe-app">
       <div className="vibe-glow" />
       {/* A separate layer from the glow rather than more gradients on it. The glow is ambient
           light and has to stay under everything at low alpha; a *pattern* needs its own element so
           it can be swapped, removed, or absent entirely without touching the lighting. */}
-      {backdrop ? <div className={`vibe-backdrop vibe-backdrop--${backdrop}${floored ? " vibe-backdrop--floored" : ""}`} /> : null}
+      {backdrop ? <div className={`vibe-backdrop vibe-backdrop--${backdrop}`} /> : null}
       {children}
     </main>
   );
 }
 
-export function CenterMessage({ children, error }: { children: ReactNode; error?: boolean }) {
-  return <div style={{ ...S.centerMessage, ...(error ? S.centerMessageError : null) }}>{children}</div>;
+/**
+ * One thing to say, in the middle of the frame, as the page's heading (every screen needs one, and these
+ * have no other). `children` is what goes under it. `mark` puts the brand above, for a screen that is an invitation.
+ */
+export function CenterMessage({ title, children, error, mark }: { title: ReactNode; children?: ReactNode; error?: boolean; mark?: boolean }) {
+  return (
+    <div className={`vibe-message${error ? " vibe-message--error" : ""}`}>
+      {mark && (
+        <span className="vibe-message__mark">
+          <VibeMarkIcon size={40} />
+        </span>
+      )}
+      <h1 className="vibe-message__title">{title}</h1>
+      {children}
+    </div>
+  );
 }
 
 /**
@@ -59,17 +61,17 @@ export function CenterMessage({ children, error }: { children: ReactNode; error?
  * doesn't know the dimensions of yet (there's no track, no queue length, nothing to outline).
  * Tinted with the instance's own accent so this, like everything else, reads as *this* bot.
  */
-export function ConnectingState({ accent, reason }: { accent: string; reason?: string | null }) {
+export function ConnectingState({ reason }: { reason?: string | null }) {
   return (
-    <div style={S.connectingWrap}>
-      <div className="vibe-mark-pulse" style={{ color: accent }}>
+    <div className="vibe-connecting">
+      <div className="vibe-connecting__mark">
         <VibeMarkIcon size={56} />
       </div>
-      <span style={S.connectingLabel}>Connecting…</span>
+      <h1 className="vibe-hint vibe-message__title">Connecting…</h1>
       {/* Why it is still waiting, when the server said. So a refused connection does not look
           like a slow one. Always mounted: a live region is announced when its text
           changes, and one inserted with its text already in it often is not. */}
-      <span role="status" style={S.hintLine}>
+      <span role="status" className="vibe-hint">
         {reason ?? ""}
       </span>
     </div>
@@ -88,7 +90,7 @@ export function Notice({ children }: { children?: ReactNode }) {
   // Always in the page, empty when there is nothing to say, and only its text changes. A region that
   // appears with its text already inside it is the case screen readers commonly stay silent on.
   return (
-    <p style={children ? S.notice : S.noticeEmpty} role="status">
+    <p className={children ? "vibe-notice" : "vibe-sr"} role="status">
       {children}
     </p>
   );

@@ -1,0 +1,118 @@
+/*
+ * Tokens. The vocabulary is the website's (website/css/core.css): the same grounds, inks, accent
+ * logic, 4px spacing, radii and motion. What differs is density: the body is 15px here, not 17px,
+ * because this runs in a small pane for hours. activity/DESIGN.md has the scale and the contrast table.
+ *
+ * Order of the sheets: tokens, base, components, views, small-windows (see index.css).
+ */
+:root {
+  /* Dark only; this also puts native controls and scrollbars in dark chrome. */
+  color-scheme: dark;
+
+  /* Colour. Grounds and inks are fixed and neutral, so every pair's contrast holds for any accent. */
+  --ground: #0b0b0d;
+  --surface: #131317;
+  --surface-2: #1b1b20;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.17);
+  /* The edge of a control someone has to find: 3.4:1 against the ground. */
+  --line-control: rgba(255, 255, 255, 0.38);
+  --fill: rgba(255, 255, 255, 0.07);
+  --fill-hover: rgba(255, 255, 255, 0.13);
+  --ink: #f5f2f3;
+  --ink-2: #aba5a9;
+  --ink-3: #8d868b;
+  --danger: #ff8a8a;
+  /* What is printed on the accent. theme.ts lightens any accent until this reads on it at 4.5:1. */
+  --accent-ink: #0b0b0d;
+
+  /* Type. One family; the system stack behind it catches scripts the subsets do not cover. */
+  --font: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+  --step--2: 0.75rem;
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.0625rem;
+  --step-2: 1.25rem;
+  --step-3: 1.5rem;
+  --regular: 400;
+  --medium: 500;
+  --bold: 600;
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading: 1.45;
+  --track-heading: -0.02em;
+  --track-display: -0.03em;
+
+  /* Space, on a 4px base. */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --target: 2.75rem; /* 44px, the smallest thing a finger is asked to hit */
+
+  /* Radii: small for controls and thumbnails, medium for the cover and surfaces, large for panels,
+     full for round buttons and pills. Nothing else. */
+  --r-1: 0.5rem;
+  --r-2: 0.75rem;
+  --r-3: 1.25rem;
+  --r-full: 999px;
+
+  /* Elevation: a hairline for things on the ground, a shadow for the one thing above it (the cover). */
+  --ring: 0 0 0 1px var(--line);
+  --lift: 0 0 0 1px var(--line), 0 1.5rem 3.5rem -1rem rgba(0, 0, 0, 0.8);
+
+  /* The cover's light behind the stage: how much of the blurred cover shows, and how much of the
+     ground is laid back over it. Text over it is ink or ink-2 only; tokens.test.ts holds both at
+     4.5:1 for a pure white cover, which is the worst a cover can do. */
+  --wash: 0.5;
+  --scrim: 62%;
+  --scrim-ground: color-mix(in srgb, var(--ground) var(--scrim), transparent);
+
+  /* Motion: answers a press, opens or arrives, and the slow change of light between songs. */
+  --t-fast: 120ms;
+  --t: 200ms;
+  --t-slow: 600ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Layers. */
+  --z-back: 0;
+  --z-content: 1;
+  --z-bar: 2;
+
+  /*
+   * Safe areas. Two things eat into the frame on a phone: the notch and home indicator, which
+   * env() reports (only with `viewport-fit=cover`, see index.html), and Discord's own floating
+   * controls, which it draws over the frame and reports nowhere. The allowances for those are
+   * measured, not derived; these two properties are the only things to retune.
+   */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  /* The top row of Discord's buttons, on a phone only (the platform is stamped on <html> in main.tsx). */
+  --discord-chrome: 0px;
+  /* The bottom control bar, drawn over the frame on desktop too. Only views with no transport clear it. */
+  --discord-chrome-bottom: 96px;
+}
+
+:root[data-platform="mobile"] {
+  --discord-chrome: 56px;
+}
+
+/*
+ * Everything that follows the accent. Declared where the accent is: Shell sets `--accent` and
+ * `--accent-hover` inline on the app root (one per bot instance, or the viewer's own colour), and a
+ * color-mix() written on :root would resolve against nothing.
+ */
+.vibe-app {
+  /* The accent as text or as a glyph: nudged toward ink, so it reads at 4.5:1 on the raised surfaces
+     too, where the clamp (measured against the ground) leaves a dark accent just short. */
+  --accent-text: color-mix(in srgb, var(--accent) 80%, var(--ink));
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  --accent-line: color-mix(in srgb, var(--accent) 45%, transparent);
+  --accent-glow: color-mix(in srgb, var(--accent) 16%, transparent);
+}

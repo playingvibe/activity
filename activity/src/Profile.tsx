@@ -1,6 +1,7 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import { useActivitySync, type ProfileBadge, type ProfileLevel } from "./useActivitySync";
 import { BackIcon } from "./icons";
+import { Fact, Facts, FactsSkeleton } from "./Facts";
 
 type Props = {
   sync: Pick<ReturnType<typeof useActivitySync>, "identity" | "profile" | "requestProfile" | "notice" | "status">;
@@ -25,42 +26,50 @@ export default function Profile({ sync, onBack }: Props) {
   }, []);
 
   return (
-    <div style={S.panel} className="vibe-fade-in">
-      <button className="vibe-icon-btn" style={S.backBtn} onClick={onBack} aria-label="Back">
-        <BackIcon />
-      </button>
-
-      <div style={S.identity}>
+    <div className="vibe-panel vibe-arrive">
+      <div className="vibe-panel__head">
+        <button className="vibe-btn vibe-btn--tonal" onClick={onBack} aria-label="Back">
+          <BackIcon />
+        </button>
         {identity?.avatarUrl ? (
-          <img src={identity.avatarUrl} alt="" style={S.avatar} />
+          <img src={identity.avatarUrl} alt="" className="vibe-avatar" />
         ) : (
-          <div style={S.avatarPlaceholder}>
+          <div className="vibe-avatar">
             {(identity?.globalName ?? identity?.username ?? "?").slice(0, 1).toUpperCase()}
           </div>
         )}
-        <h1 ref={heading} tabIndex={-1} style={S.name}>
-          {identity?.globalName ?? identity?.username ?? "…"}
-        </h1>
-        {identity?.globalName && <p style={S.handle}>@{identity.username}</p>}
+        <div className="vibe-panel__who">
+          <h1 ref={heading} tabIndex={-1} className="vibe-panel__title vibe-clip">
+            {identity?.globalName ?? identity?.username ?? "…"}
+          </h1>
+          {identity?.globalName && <p className="vibe-hint vibe-clip">@{identity.username}</p>}
+        </div>
       </div>
 
       {profile ? (
-        <div style={S.stats}>
-          {profile.level && <LevelCard level={profile.level} />}
-          <StatCard label="Total listening time" value={formatLongDuration(profile.stats.totalListeningTime)} />
-          <div style={S.statRow}>
-            <StatCard label="Current streak" value={formatDays(profile.stats.currentStreak)} />
-            <StatCard label="Longest streak" value={formatDays(profile.stats.longestStreak)} />
-          </div>
-          {profile.stats.sessionCount !== undefined && (
-            <StatCard label="Tracks listened" value={profile.stats.sessionCount.toLocaleString()} />
-          )}
-          {profile.badges && <Badges badges={profile.badges} />}
+        <>
+          {profile.level && <Level level={profile.level} />}
+          <Facts>
+            <Fact label="Total listening time">{formatLongDuration(profile.stats.totalListeningTime)}</Fact>
+            {profile.stats.sessionCount !== undefined && (
+              <Fact label="Tracks listened">{profile.stats.sessionCount.toLocaleString()}</Fact>
+            )}
+            <Fact label="Current streak">{formatDays(profile.stats.currentStreak)}</Fact>
+            <Fact label="Longest streak">{formatDays(profile.stats.longestStreak)}</Fact>
+            {profile.badges && (
+              <Fact label="Badges" wide>
+                <Badges badges={profile.badges} />
+              </Fact>
+            )}
+          </Facts>
           {/* plan is always null today: entitlements exist, but the profile panel does not surface
               premium yet. This is the reserved spot for it, not a fallback UI to design around. */}
-        </div>
+        </>
       ) : (
-        <p style={S.loading}>{notice ?? (live ? "Loading stats…" : "Waiting for Vibe to reconnect…")}</p>
+        <>
+          <p className="vibe-hint">{notice ?? (live ? "Loading stats…" : "Waiting for Vibe to reconnect…")}</p>
+          <FactsSkeleton />
+        </>
       )}
     </div>
   );
@@ -71,28 +80,28 @@ export default function Profile({ sync, onBack }: Props) {
  * disagree with `/rank` the day the curve changes. A new listener is level 1 with an empty bar,
  * which reads as a start.
  */
-function LevelCard({ level }: { level: ProfileLevel }) {
+function Level({ level }: { level: ProfileLevel }) {
   const percent = Math.round(Math.max(0, Math.min(1, level.progress)) * 100);
 
   return (
-    <div style={S.levelCard}>
-      <div style={S.levelRow}>
-        <p style={S.levelName}>Level {level.level}</p>
-        <p style={S.levelNext}>
+    <div className="vibe-level">
+      <div className="vibe-level__row">
+        <p className="vibe-level__name">Level {level.level}</p>
+        <p className="vibe-hint">
           {level.remainingMs === null
             ? "Max level"
             : `${formatLongDuration(level.remainingMs)} to level ${level.level + 1}`}
         </p>
       </div>
       <div
-        style={S.levelTrack}
+        className="vibe-meter"
         role="progressbar"
         aria-label={`Progress to level ${level.level + 1}`}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
       >
-        <div style={{ ...S.levelFill, width: `${percent}%` }} />
+        <div className="vibe-meter__fill" style={{ transform: `scaleX(${percent / 100})` }} />
       </div>
     </div>
   );
@@ -100,30 +109,15 @@ function LevelCard({ level }: { level: ProfileLevel }) {
 
 /** Earned tiers as coloured pills; the empty state says where it starts rather than showing nothing. */
 function Badges({ badges }: { badges: ProfileBadge[] }) {
+  if (!badges.length) return <span className="vibe-hint">None yet. Keep listening and your first one lands soon.</span>;
   return (
-    <div style={S.badgeCard}>
-      <p style={S.badgeTitle}>Badges</p>
-      {badges.length ? (
-        <div style={S.badgeRow}>
-          {badges.map((badge) => (
-            <span key={badge.name} style={{ ...S.badge, borderColor: badge.color, color: badge.color }}>
-              {badge.name}
-            </span>
-          ))}
-        </div>
-      ) : (
-        <p style={S.badgeEmpty}>None yet. Keep listening and your first one lands soon.</p>
-      )}
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={S.statCard}>
-      <p style={S.statValue}>{value}</p>
-      <p style={S.statLabel}>{label}</p>
-    </div>
+    <span className="vibe-badges">
+      {badges.map((badge) => (
+        <span key={badge.name} className="vibe-badge" style={{ "--badge": badge.color } as CSSProperties}>
+          {badge.name}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -142,80 +136,3 @@ function formatLongDuration(ms: number): string {
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
 }
-
-const S: Record<string, CSSProperties> = {
-  panel: {
-    position: "relative",
-    display: "flex",
-    flexDirection: "column",
-    gap: "1.5rem",
-    alignItems: "center",
-    textAlign: "center",
-    paddingTop: "0.5rem",
-  },
-  backBtn: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: 36,
-    height: 36,
-    background: "rgba(255,255,255,0.08)",
-    borderRadius: 999,
-    color: "#f5f2f3",
-  },
-  identity: { display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" },
-  avatar: { width: 84, height: 84, borderRadius: "50%", objectFit: "cover" },
-  avatarPlaceholder: {
-    width: 84,
-    height: 84,
-    borderRadius: "50%",
-    background: "var(--vibe-accent)",
-    color: "#0b0b0d",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "1.8rem",
-    fontWeight: 700,
-  },
-  name: { margin: "0.4rem 0 0", fontSize: "1.2rem", fontWeight: 700 },
-  handle: { margin: 0, opacity: 0.55, fontSize: "0.85rem" },
-  stats: { display: "flex", flexDirection: "column", gap: "0.6rem", width: "100%", maxWidth: 340 },
-  statRow: { display: "flex", gap: "0.6rem" },
-  statCard: {
-    flex: 1,
-    padding: "0.9rem",
-    borderRadius: 12,
-    background: "rgba(255,255,255,0.06)",
-  },
-  levelCard: {
-    padding: "0.9rem",
-    borderRadius: 12,
-    background: "rgba(255,255,255,0.06)",
-    textAlign: "left",
-  },
-  levelRow: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.6rem" },
-  levelName: { margin: 0, fontSize: "1.3rem", fontWeight: 700 },
-  levelNext: { margin: 0, fontSize: "0.72rem", opacity: 0.6 },
-  levelTrack: {
-    marginTop: "0.6rem",
-    height: 6,
-    borderRadius: 999,
-    background: "rgba(255,255,255,0.1)",
-    overflow: "hidden",
-  },
-  levelFill: { height: "100%", borderRadius: 999, background: "var(--vibe-accent)" },
-  badgeCard: { padding: "0.9rem", borderRadius: 12, background: "rgba(255,255,255,0.06)", textAlign: "left" },
-  badgeTitle: { margin: 0, fontSize: "0.72rem", opacity: 0.6 },
-  badgeRow: { display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.6rem" },
-  badge: {
-    padding: "0.25rem 0.65rem",
-    borderRadius: 999,
-    border: "1px solid",
-    fontSize: "0.8rem",
-    fontWeight: 600,
-  },
-  badgeEmpty: { margin: "0.6rem 0 0", fontSize: "0.85rem", opacity: 0.7 },
-  statValue: { margin: 0, fontSize: "1.3rem", fontWeight: 700 },
-  statLabel: { margin: "0.2rem 0 0", fontSize: "0.72rem", opacity: 0.6 },
-  loading: { opacity: 0.5, fontSize: "0.85rem" },
-};

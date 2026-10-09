@@ -17,7 +17,7 @@
  * centred in its height, would not be seen.
  *
  * `null` is any other window: a desktop one, the full-screen phone Activity, or a phone held sideways.
- * Stamped on `<html>` as `data-mini`, which `player.css` keys off.
+ * Stamped on `<html>` as `data-mini`, which `styles/small-windows.css` keys off.
  */
 
 /** Narrower than this, and a title would not be readable beside any picture. */

@@ -3,7 +3,6 @@ import type { Track } from "./useActivitySync";
 import { thumbnailSrc } from "./media";
 import { BoostIcon, MusicNoteIcon } from "./icons";
 import { formatDuration } from "./format";
-import { S } from "./playerStyles";
 
 /**
  * The upcoming tracks.
@@ -37,8 +36,8 @@ export function Queue({
   if (total === 0) {
     return (
       <section className="vibe-queue-rail">
-        <h2 style={S.heading}>Up next</h2>
-        <p style={S.hint}>Nothing queued up next.</p>
+        <h2 className="vibe-heading">Up next</h2>
+        <p className="vibe-hint">Nothing queued up next.</p>
       </section>
     );
   }
@@ -46,14 +45,16 @@ export function Queue({
   const rowKeys = queueRowKeys(tracks);
 
   return (
-    <section style={S.queueSection} className="vibe-queue-rail vibe-fade-in">
-      <h2 style={S.heading}>Up next · {total}</h2>
+    <section className="vibe-queue-rail">
+      <h2 className="vibe-heading">
+        Up next <span className="vibe-num">{total}</span>
+      </h2>
       {total > tracks.length && (
-        <p style={S.hint}>
+        <p className="vibe-hint">
           Showing the first {tracks.length} of {total}.
         </p>
       )}
-      <ol style={S.queue}>
+      <ol className="vibe-queue">
         {tracks.map((track, i) => (
           <QueueRow
             key={rowKeys[i]}
@@ -97,30 +98,32 @@ function QueueRow({
   });
 
   return (
-    <li className="vibe-queue-row" style={disabled ? { ...S.queueRow, opacity: 0.6 } : S.queueRow}>
+    <li className="vibe-row">
       {/* A real button inside the list item, so the list stays a list for a screen reader and
           the boost button beside it is not nested in another control. */}
       <button
         type="button"
-        className="vibe-queue-play"
-        style={disabled ? { ...S.queuePlay, cursor: "default" } : S.queuePlay}
+        className="vibe-row__play"
         aria-label={label}
         disabled={disabled}
         onClick={jump}
       >
         <QueueArt src={thumbnailSrc(track.thumbnail)} />
-        <span style={S.queueTitle}>
-          {track.title ?? "Unknown track"}
-          {track.author && <span style={S.queueAuthor}> · {track.author}</span>}
+        <span className="vibe-clip">
+          <span className="vibe-row__title vibe-clip">{track.title ?? "Unknown track"}</span>
+          {track.author && <span className="vibe-row__artist vibe-clip">{track.author}</span>}
         </span>
-        <span style={S.queueTime}>{track.isStream ? "live" : formatDuration(track.lengthMs ?? 0)}</span>
+        <span className="vibe-row__meta">
+          <span className="vibe-num">{track.isStream ? "live" : formatDuration(track.lengthMs ?? 0)}</span>
+          {track.requesterName && <span className="vibe-clip">{track.requesterName}</span>}
+        </span>
       </button>
       {/* Every listener can boost; only the first upcoming track has nowhere to go. */}
       {onBoost && position >= 2 ? (
         <button
           type="button"
-          className="vibe-queue-boost"
-          style={(track.boosts ?? 0) > 0 ? { ...S.boostBtn, ...S.boostBtnActive } : S.boostBtn}
+          className="vibe-boost vibe-num"
+          data-on={(track.boosts ?? 0) > 0 ? "" : undefined}
           disabled={disabled}
           aria-label={`Boost: ${track.title ?? "Unknown track"}${
             (track.boosts ?? 0) > 0 ? `, ${track.boosts} of ${boostRequired} boosts` : ""
@@ -160,11 +163,11 @@ function QueueArt({ src }: { src: string | null }) {
 
   if (!src || failed) {
     return (
-      <div style={S.queueArtPlaceholder}>
-        <MusicNoteIcon size={14} />
-      </div>
+      <span className="vibe-thumb">
+        <MusicNoteIcon size={18} />
+      </span>
     );
   }
 
-  return <img src={src} alt="" loading="lazy" decoding="async" style={S.queueArtImage} onError={() => setFailed(true)} />;
+  return <img src={src} alt="" loading="lazy" decoding="async" className="vibe-thumb" onError={() => setFailed(true)} />;
 }

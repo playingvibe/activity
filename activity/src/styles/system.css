@@ -1,0 +1,66 @@
+/* The `?system=1` page only: how the specimens are laid out. Loaded with that page, never by the player. */
+.vibe-system {
+  grid-row: 1 / -1;
+  position: relative;
+  z-index: var(--z-content);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+  align-content: start;
+  gap: var(--s-6) var(--s-7);
+  padding: var(--s-5);
+  overflow-y: auto;
+}
+.vibe-system__head {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-3) var(--s-5);
+}
+.vibe-system__themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  font-size: var(--step--1);
+}
+.vibe-system__themes a {
+  color: var(--ink-2);
+}
+.vibe-system__block {
+  display: grid;
+  align-content: start;
+  gap: var(--s-3);
+  min-width: 0;
+}
+.vibe-system__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--target);
+}
+.vibe-system__row > .vibe-hint:first-child {
+  flex: none;
+  width: 7.5rem;
+}
+.vibe-system__swatches {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--s-2);
+  color: var(--ink-2);
+  font-size: var(--step--2);
+}
+.vibe-system__swatch span {
+  display: block;
+  height: 2.5rem;
+  margin-bottom: var(--s-1);
+  border-radius: var(--r-1);
+  background: var(--swatch);
+  box-shadow: var(--ring);
+}
+.vibe-system__grounds p {
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--step--1);
+}
+.vibe-system__cover .vibe-cover {
+  width: 8rem;
+}

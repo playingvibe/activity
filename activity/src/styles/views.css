@@ -1,0 +1,686 @@
+/*
+ * Views: the shell and what each screen lays out in it. Components come from components.css; this
+ * sheet only places and sizes them. The read-only small windows are in small-windows.css, which
+ * comes last.
+ *
+ * Three widths of pane, by what fits: under 600px the cover is stacked over the words; from 600px
+ * they sit side by side; from 900px the queue is a rail beside them and the strip holds every
+ * button. `900px` is also in Player.tsx (`useWideFrame`), which has to agree with it. A pane that
+ * is short but wide enough is laid out like a wide one, without the queue.
+ */
+
+/* --- shell ----------------------------------------------------------------------------------- */
+/*
+ * Three regions, of which exactly one scrolls: a top bar (where a view has one) and the transport
+ * are pinned, the body between them scrolls. `minmax(0, 1fr)` on the middle row is load-bearing: a
+ * plain `1fr` track takes its content as a minimum, and a long queue would push the transport out.
+ *
+ * A size container, so anything inside can be sized from the pane's real height (`cqh`): `vh`
+ * measures the frame's reported viewport, which is not always the box the client gives it.
+ */
+.vibe-app {
+  position: relative;
+  container-type: size;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  overflow: hidden;
+  /* Out of the 100% height, not added to it (border-box). */
+  padding-top: calc(var(--safe-top) + var(--discord-chrome));
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+/* The instance's tone along the top edge of a view that has no cover to light it. */
+.vibe-glow {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-back);
+  pointer-events: none;
+  background: linear-gradient(to bottom, var(--accent-glow), transparent 40%);
+  opacity: 0.5;
+}
+/* A playing view lit by its cover has no need of it; one with a viewer's backdrop keeps it. */
+.vibe-app:has(.vibe-wash) .vibe-glow {
+  display: none;
+}
+
+.vibe-topbar {
+  position: relative;
+  z-index: var(--z-content);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s-1);
+  padding: var(--s-2) var(--s-3);
+}
+
+.vibe-body {
+  /* Always the middle row, even when it is the app's only child (connecting, error). */
+  grid-row: 2;
+  position: relative;
+  z-index: var(--z-content);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--s-5);
+  width: 100%;
+  max-width: 77.5rem;
+  min-height: 0;
+  margin-inline: auto;
+  padding: 0 var(--s-5) var(--s-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* No scrollbar down the edge of the player: it scrolls by wheel, trackpad and touch regardless. */
+  scrollbar-width: none;
+}
+
+/*
+ * One thing to show (connecting, error, nothing playing, a panel): centred while it fits. `safe`
+ * matters: plain `center` on a scroll container overflows at both ends, and the top half (the Back
+ * button, in a panel) could not be scrolled to.
+ */
+.vibe-body--solo {
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+  /* Clears Discord's bottom bar with padding, so what would sit under it can be scrolled to. */
+  padding-bottom: calc(var(--s-5) + var(--discord-chrome-bottom));
+}
+
+/*
+ * Settings and Profile keep a real scrollbar: their content can exceed the frame and holds
+ * controls someone without a wheel has no other way to reach. After `.vibe-body` on purpose:
+ * equal specificity, so order decides.
+ */
+.vibe-body--panel {
+  padding-top: var(--s-5);
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+@media (min-width: 900px) {
+  .vibe-body--solo {
+    max-width: 56rem;
+  }
+}
+/* A frame this short is not one Discord's bottom bar can cover, and the clearance would make a lone
+   message scroll with nothing in the scroll to focus. */
+@media (max-height: 300px) {
+  .vibe-body--solo {
+    padding-bottom: var(--s-4);
+  }
+}
+
+/* --- the playing view ------------------------------------------------------------------------ */
+/* Edge to edge: the stage, then the queue under it in the same scroll. */
+
+/* A plain block while it scrolls: as a grid in a frame shorter than its content, a row whose item
+   clips its overflow (the stage) is allowed to shrink to nothing. */
+.vibe-body--player {
+  display: block;
+  max-width: none;
+  padding: 0;
+}
+
+/*
+ * The stage: the cover and the words beside it, lit from behind by the cover. Its own stacking
+ * context, so the light stays under everything in it and never reaches the queue or the strip.
+ */
+.vibe-stage {
+  position: relative;
+  isolation: isolate;
+  container-type: inline-size;
+  min-width: 0;
+  padding: var(--s-4);
+  overflow: hidden;
+}
+
+.vibe-wash {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* A small copy scaled up, so the blur is cheap, centred on where the cover is. */
+.vibe-wash .vibe-layer {
+  inset: auto;
+  top: 45%;
+  left: 50%;
+  width: 16rem;
+  height: 16rem;
+  margin: -8rem 0 0 -8rem;
+}
+.vibe-wash img {
+  filter: blur(2.5rem) saturate(1.2);
+  opacity: var(--wash);
+  transform: scale(5);
+}
+.vibe-wash .vibe-layer[data-arriving="now"] {
+  animation: vibe-arrive var(--t-slow) linear both;
+}
+/* The scrim is the same strength wherever text can be, and closes to the ground at the stage's far edge. */
+.vibe-wash::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, var(--scrim-ground) 55%, var(--ground));
+}
+
+/* The buttons that lead away, in the stage's corner where the strip has no room for them. */
+.vibe-stage > .vibe-topbar {
+  position: absolute;
+  top: var(--s-2);
+  right: var(--s-2);
+  z-index: 1;
+  padding: 0;
+}
+.vibe-stage > .vibe-topbar .vibe-btn {
+  background: color-mix(in srgb, var(--ground) 60%, transparent);
+  color: var(--ink);
+}
+
+.vibe-stage .vibe-cover {
+  /* Stacked: as wide as the pane allows, but never so tall that the words leave the first screen. */
+  width: min(100%, 46cqh);
+  margin-inline: auto;
+}
+/* Paused: the cover goes dark with the sound. The play button says it too. */
+.vibe-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--ground) 55%, transparent);
+  opacity: 0;
+  transition: opacity var(--t) linear;
+}
+.vibe-stage[data-paused] .vibe-cover::after {
+  opacity: 1;
+}
+
+/*
+ * The words. Always three lines' worth of structure, bottom-aligned in a block of fixed height, so
+ * a longer title grows upward into its own reserve and nothing outside the block moves.
+ */
+.vibe-now {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  min-height: 7rem;
+  margin-top: var(--s-3);
+  animation: vibe-arrive var(--t) linear both;
+}
+.vibe-now__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: var(--step-3);
+  letter-spacing: var(--track-display);
+  line-height: var(--leading-tight);
+  text-wrap: balance;
+  /* Room for descenders, which the clamp would otherwise cut. */
+  padding-bottom: 0.08em;
+}
+.vibe-now__artist {
+  margin-top: var(--s-2);
+  color: var(--ink-2);
+  font-size: var(--step-1);
+}
+/* ink-2, not ink-3: over the cover's light the quieter ink falls short of 4.5:1. */
+.vibe-now__by {
+  margin-top: var(--s-1);
+  color: var(--ink-2);
+  font-size: var(--step--1);
+}
+
+/* Why most of the controls are dimmed, for a listener who is not a DJ. */
+.vibe-now__note {
+  margin-top: var(--s-2);
+  color: var(--ink-2);
+  font-size: var(--step--1);
+}
+
+/* From 600px the words sit beside the cover, at its foot, like the notes on a sleeve. */
+@media (min-width: 600px) {
+  .vibe-stage {
+    padding: var(--s-5);
+  }
+  .vibe-sleeve {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: var(--s-5);
+  }
+  .vibe-stage .vibe-cover {
+    width: min(44cqw, 56cqh);
+    margin: 0;
+  }
+  .vibe-now {
+    flex: 1;
+    max-width: 30rem;
+    min-height: 0;
+    margin: 0;
+  }
+  .vibe-now__title {
+    -webkit-line-clamp: 3;
+    font-size: clamp(var(--step-3), 4.2cqw, 2.75rem);
+  }
+  .vibe-now__artist {
+    margin-top: var(--s-3);
+    font-size: var(--step-2);
+  }
+  .vibe-wash .vibe-layer {
+    left: 30%;
+  }
+  .vibe-wash::after {
+    background: linear-gradient(to right, var(--scrim-ground) 60%, var(--ground));
+  }
+}
+
+/* --- queue ----------------------------------------------------------------------------------- */
+
+.vibe-queue-rail {
+  min-width: 0;
+  padding: var(--s-4) var(--s-2) var(--s-5);
+  border-top: 1px solid var(--line);
+}
+.vibe-queue-rail .vibe-heading,
+.vibe-queue-rail > .vibe-hint {
+  padding: 0 var(--s-2) var(--s-2);
+}
+.vibe-queue {
+  display: grid;
+  gap: 0.125rem;
+}
+
+/*
+ * A pane with room: the stage fills the height and the cover is sized from it. From 900px the
+ * queue is a rail of its own that scrolls on its own; in a short pane it waits for more room.
+ */
+@media (min-width: 900px), (min-width: 480px) and (max-height: 416px) {
+  .vibe-body--player {
+    display: grid;
+    align-content: stretch;
+    gap: 0;
+    overflow: hidden;
+  }
+  .vibe-stage {
+    container-type: size;
+    padding: var(--s-6);
+  }
+  .vibe-sleeve {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: var(--s-6);
+    height: 100%;
+  }
+  .vibe-stage .vibe-cover {
+    width: min(100cqh, 58cqw);
+    margin: 0;
+  }
+  .vibe-now {
+    flex: 1;
+    max-width: 30rem;
+    min-height: 0;
+    margin: 0;
+  }
+  .vibe-queue-rail {
+    display: none;
+  }
+}
+@media (min-width: 900px) {
+  .vibe-body--player:not(.vibe-body--alone) {
+    grid-template-columns: minmax(0, 1fr) clamp(20rem, 28%, 28rem);
+  }
+  /* The one region with unbounded content, so it keeps a real scrollbar: thin and quiet. */
+  .vibe-queue-rail {
+    display: block;
+    min-height: 0;
+    padding: var(--s-5) var(--s-2) var(--s-4) var(--s-3);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+}
+/*
+ * Narrow and short (a phone held sideways is wider than this; a small window is not): the stacked layout
+ * needs about 450px for the cover, the words and the strip, so below that the cover and the words share
+ * a row, and the queue waits underneath in the scroll.
+ */
+@media (max-width: 479px) and (max-height: 451px) {
+  .vibe-stage {
+    padding: var(--s-3) var(--s-4);
+  }
+  .vibe-sleeve {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+  }
+  .vibe-stage .vibe-cover {
+    width: min(34cqw, 40cqh);
+    margin: 0;
+  }
+  .vibe-now {
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+  }
+  .vibe-now__title {
+    -webkit-line-clamp: 2;
+    font-size: var(--step-1);
+  }
+  .vibe-now__artist {
+    margin-top: var(--s-1);
+    font-size: var(--step-0);
+  }
+  /* The two buttons stand in a column at the edge, and the words leave them the room. */
+  .vibe-stage > .vibe-topbar {
+    top: var(--s-1);
+    right: var(--s-1);
+    flex-direction: column;
+    gap: 0;
+  }
+  .vibe-stage > .vibe-topbar .vibe-btn {
+    background: none;
+  }
+  .vibe-now {
+    padding-right: var(--target);
+  }
+}
+/* A short pane: less air, and a title of two lines. */
+@media (min-width: 480px) and (max-height: 416px) {
+  .vibe-stage {
+    padding: var(--s-4) var(--s-5);
+  }
+  .vibe-sleeve {
+    align-items: center;
+    gap: var(--s-5);
+  }
+  .vibe-stage .vibe-cover {
+    width: min(100cqh, 40cqw);
+  }
+  .vibe-now__title {
+    -webkit-line-clamp: 2;
+    font-size: clamp(var(--step-2), 5cqw, 2rem);
+  }
+  .vibe-now__artist {
+    margin-top: var(--s-2);
+    font-size: var(--step-1);
+  }
+}
+
+/* --- transport ------------------------------------------------------------------------------- */
+/*
+ * The strip: pinned to the bottom of the frame in every layout. Narrow, it is two rows: the seek
+ * bar between its two times, then the buttons. With room it is one row, and the seek bar is the
+ * strip's own top edge.
+ */
+
+.vibe-transport {
+  /* Always the last row, whether or not a top bar takes the first. */
+  grid-row: 3;
+  position: relative;
+  z-index: var(--z-bar);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s-1) var(--s-3);
+  /* The bottom inset lands here, so the strip's ground runs behind the home indicator. */
+  padding: var(--s-2) var(--s-4) calc(var(--s-2) + var(--safe-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--ground);
+}
+.vibe-controls {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.vibe-time {
+  color: var(--ink-2);
+  font-size: var(--step--2);
+}
+
+.vibe-seek {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+}
+.vibe-seek__times {
+  display: contents;
+}
+/* A stream has no times to put either side of a bar: the one line, centred. */
+.vibe-seek--live {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+}
+.vibe-seek__now {
+  grid-column: 1;
+  grid-row: 1;
+}
+.vibe-seek__len {
+  grid-column: 3;
+  grid-row: 1;
+}
+.vibe-seek__of {
+  display: none;
+}
+.vibe-seek .vibe-slider {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+/* The volume appears once there is a place for it; a phone has its own buttons for that. */
+.vibe-transport-side {
+  grid-column: 3;
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  min-width: 0;
+}
+.vibe-transport-volume {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--ink-2);
+}
+.vibe-transport-volume .vibe-slider {
+  width: 6rem;
+}
+.vibe-transport-tools {
+  display: flex;
+  align-items: center;
+  padding-left: var(--s-2);
+  border-left: 1px solid var(--line-strong);
+}
+@media (min-width: 600px) {
+  .vibe-transport-side {
+    display: flex;
+  }
+}
+
+/* What only the read-only small windows show. */
+.vibe-transport-meta,
+.vibe-hairline {
+  display: none;
+}
+.vibe-transport-text {
+  display: grid;
+  min-width: 0;
+}
+.vibe-transport-title {
+  font-weight: var(--bold);
+}
+.vibe-transport-artist {
+  color: var(--ink-2);
+}
+
+/* A refused control, or why the player is frozen: floated over the strip's edge, so it moves nothing. */
+.vibe-transport > .vibe-notice {
+  position: absolute;
+  bottom: calc(100% + var(--s-4));
+  left: 50%;
+  width: max-content;
+  max-width: calc(100% - var(--s-6));
+  box-shadow: inset 0 0 0 1px var(--line-strong), 0 0.5rem 1.5rem rgba(0, 0, 0, 0.5);
+  transform: translateX(-50%);
+}
+
+/* One row: the time, the buttons dead centre however long anything else is, then the rest. */
+@media (min-width: 900px), (min-width: 480px) and (max-height: 416px) {
+  .vibe-transport {
+    padding: var(--s-3) var(--s-4) calc(var(--s-2) + var(--safe-bottom)) var(--s-5);
+  }
+  .vibe-seek {
+    display: contents;
+  }
+  .vibe-seek__times {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    gap: var(--s-1);
+    justify-self: start;
+    font-size: var(--step--1);
+  }
+  .vibe-seek__of {
+    display: inline;
+  }
+  .vibe-seek__of,
+  .vibe-seek__len {
+    color: var(--ink-3);
+  }
+  /* The strip's top edge. Wider than the strip by half a thumb each side, so the rail runs edge to edge. */
+  /* No grid lines of its own: an absolute child with them is placed inside that grid area, not the strip. */
+  .vibe-seek .vibe-slider {
+    grid-area: auto;
+    position: absolute;
+    top: -0.625rem;
+    left: -0.375rem;
+    right: -0.375rem;
+    width: auto;
+  }
+  .vibe-seek .vibe-meter {
+    border-radius: 0;
+  }
+  /* Over the foot of the cover, clear of the words beside it. */
+  .vibe-transport > .vibe-notice {
+    left: var(--s-6);
+    transform: none;
+  }
+  .vibe-seek .vibe-range {
+    height: 1.25rem;
+  }
+}
+@media (min-width: 480px) and (max-height: 416px) {
+  .vibe-transport {
+    padding-block: var(--s-2) calc(var(--s-1) + var(--safe-bottom));
+  }
+  .vibe-play {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+/* --- panels: settings and profile ------------------------------------------------------------ */
+
+.vibe-panel {
+  display: grid;
+  gap: var(--s-5);
+  width: 100%;
+  max-width: 40rem;
+  margin-inline: auto;
+}
+.vibe-panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.vibe-panel__who {
+  min-width: 0;
+}
+.vibe-panel__title {
+  font-size: var(--step-2);
+  letter-spacing: var(--track-heading);
+  line-height: var(--leading-snug);
+}
+.vibe-panel__intro {
+  color: var(--ink-2);
+}
+.vibe-level__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+.vibe-level__name {
+  font-size: var(--step-3);
+  font-weight: var(--bold);
+  letter-spacing: var(--track-display);
+}
+.vibe-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+/* --- backdrops ------------------------------------------------------------------------------- */
+/*
+ * A viewer's own backdrop: a separate layer from the glow, and much quieter than on the rank card,
+ * which is a picture; this is a surface people read. The key becomes the class, so every key the
+ * generated allow-list accepts needs a rule here (backdrops.test.ts checks).
+ *
+ * **Each is held to what keeps the quietest ink (ink-3) at 4.5:1 on its brightest pixel**, with the
+ * glow under it where there is one. Measured by rendering each at three sizes with the content hidden
+ * (`.revamp/backdrop-contrast.mjs`); the ceilings are in backdrops.test.ts. Raise one and that fails.
+ */
+.vibe-backdrop {
+  /* The grid row between the top and the strip: where the bars' floor is, whatever height the strip is. */
+  grid-area: 2 / 1;
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-back);
+  pointer-events: none;
+  opacity: 0.5;
+}
+/* The card's own curve, clear of the transport: positioned by percentage so it holds as the frame changes shape. */
+.vibe-backdrop--waves {
+  background: url("../backdrops/waves.svg") center 58% / 100% 34% no-repeat;
+  opacity: 0.13;
+}
+/* The mark, tilted and tiled; felt more than seen. */
+.vibe-backdrop--marks {
+  background: url("../backdrops/marks.svg") 0 0 / 78px 78px space;
+  opacity: 0.035;
+  transform: rotate(-16deg) scale(1.5);
+}
+/* The card's 46 bars. An equaliser has a floor: they stand on the strip's top edge, at a height of their
+   own so a tall phone does not stretch them. */
+.vibe-backdrop--bars {
+  inset: auto 0 0 0;
+  height: min(60%, 55cqw);
+  background: url("../backdrops/bars.svg") center bottom / 100% 100% no-repeat;
+  opacity: 0.16;
+}
+.vibe-backdrop--grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: 0.06;
+}
+.vibe-backdrop--aurora {
+  background-image:
+    linear-gradient(115deg, transparent 18%, rgba(255, 255, 255, 0.16) 36%, transparent 54%),
+    linear-gradient(115deg, transparent 56%, rgba(255, 255, 255, 0.09) 72%, transparent 88%);
+  opacity: 0.3;
+}

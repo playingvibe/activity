@@ -4,7 +4,7 @@ import App from "./App";
 import { resolvePlatform } from "./discord";
 import { watchMiniWindow } from "./miniWindow";
 
-// Stamped before render, not in a component: the mobile safe-area padding in player.css keys
+// Stamped before render, not in a component: the mobile safe-area padding in styles/tokens.css keys
 // off this, and applying it after mount would show one frame of the layout tucked under
 // Discord's own floating controls.
 document.documentElement.dataset.platform = resolvePlatform();

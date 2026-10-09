@@ -1,7 +1,7 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { useActivitySync } from "./useActivitySync";
 import { BackIcon } from "./icons";
-import { S as PlayerStyles } from "./playerStyles";
+import { Fact, Facts, FactsSkeleton } from "./Facts";
 
 type Props = {
   sync: Pick<ReturnType<typeof useActivitySync>, "guildContext" | "notice" | "requestGuildContext" | "status">;
@@ -46,9 +46,10 @@ export default function Settings({ sync, onBack }: Props) {
 
   if (!guildContext) {
     return (
-      <div style={S.panel} className="vibe-fade-in">
+      <div className="vibe-panel vibe-arrive">
         <PanelHeader onBack={onBack} headingRef={heading} />
-        <p style={S.loading}>{notice ?? (live ? "Loading settings…" : "Waiting for Vibe to reconnect…")}</p>
+        <p className="vibe-hint">{notice ?? (live ? "Loading settings…" : "Waiting for Vibe to reconnect…")}</p>
+        <FactsSkeleton count={6} />
       </div>
     );
   }
@@ -59,68 +60,53 @@ export default function Settings({ sync, onBack }: Props) {
 
   const channelNames = (ids: string[]) => ids.map((id) => `#${nameOf(channels, id, "a deleted channel")}`);
   const roleNames = (ids: string[]) => ids.map((id) => nameOf(roles, id, "a deleted role"));
-  const isOwn = (field: string) => overridden.includes(field);
+  // Only where it is true: a badge on every row is a badge nobody reads.
+  const own = (field: string) => (overridden.includes(field) ? <span className="vibe-badge">this bot only</span> : undefined);
 
   return (
-    <div style={S.panel} className="vibe-fade-in">
+    <div className="vibe-panel vibe-arrive">
       <PanelHeader onBack={onBack} headingRef={heading} />
-      {notice && <p style={S.notice}>{notice}</p>}
+      {notice && <p className="vibe-notice vibe-notice--start">{notice}</p>}
 
-      <p style={S.intro}>
+      <p className="vibe-panel__intro">
         What this bot is set to do in this server. To change any of it, use{" "}
-        <code style={S.code}>/config</code> in a text channel.
+        <code className="vibe-code" translate="no">/config</code> in a text channel.
       </p>
 
-      <Row
-        title="Voice channels it may join"
-        own={isOwn("voiceChannels")}
-        value={list(channelNames(config.voiceChannels), "Any voice channel")}
-      />
-      <Row
-        title="Channels its commands work in"
-        own={isOwn("commandsChannels")}
-        value={list(channelNames(config.commandsChannels), "Every channel")}
-      />
-      <Row
-        title="DJ roles"
-        hint="Skip without a vote, and bypass most restrictions."
-        value={list(roleNames(config.djRoles), "Nobody — everything is put to a vote")}
-      />
-      <Row
-        title="“Now playing” messages"
-        own={isOwn("announcements")}
-        value={config.announcements ? "On" : "Off"}
-      />
-      <Row
-        title="Autoplay"
-        hint="Keeps playing when the queue runs out."
-        own={isOwn("autoplay")}
-        value={
-          config.autoplay
+      <Facts>
+        <Fact label="Voice channels it may join" badge={own("voiceChannels")}>
+          {list(channelNames(config.voiceChannels), "Any voice channel")}
+        </Fact>
+        <Fact label="Channels its commands work in" badge={own("commandsChannels")}>
+          {list(channelNames(config.commandsChannels), "Every channel")}
+        </Fact>
+        <Fact label="DJ roles" hint="Skip without a vote, and bypass most restrictions.">
+          {list(roleNames(config.djRoles), "Nobody — everything is put to a vote")}
+        </Fact>
+        <Fact label="“Now playing” messages" badge={own("announcements")}>
+          {config.announcements ? "On" : "Off"}
+        </Fact>
+        <Fact label="Autoplay" hint="Keeps playing when the queue runs out." badge={own("autoplay")}>
+          {config.autoplay
             ? config.autoplayRoomTaste
               ? "On, and it may follow listeners' taste"
               : "On, from what was last playing only"
-            : "Off"
-        }
-      />
-      <Row
-        title="Blocked"
-        value={
-          config.blockedUserCount + config.blockedRoleCount === 0
+            : "Off"}
+        </Fact>
+        <Fact label="Blocked">
+          {config.blockedUserCount + config.blockedRoleCount === 0
             ? "Nobody"
             : [
                 config.blockedUserCount && plural(config.blockedUserCount, "person", "people"),
                 config.blockedRoleCount && plural(config.blockedRoleCount, "role", "roles"),
               ]
                 .filter(Boolean)
-                .join(" and ")
-        }
-      />
-      <Row
-        title="Audit log"
-        hint="Where configuration changes are recorded."
-        value={config.logChannelId ? `#${nameOf(channels, config.logChannelId, "a deleted channel")}` : "Off"}
-      />
+                .join(" and ")}
+        </Fact>
+        <Fact label="Audit log" hint="Where configuration changes are recorded.">
+          {config.logChannelId ? `#${nameOf(channels, config.logChannelId, "a deleted channel")}` : "Off"}
+        </Fact>
+      </Facts>
     </div>
   );
 }
@@ -130,90 +116,15 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 /** A list as a sentence, or what "empty" means here — never a bare "none", which reads as broken. */
 const list = (names: string[], whenEmpty: string) => (names.length ? names.join(", ") : whenEmpty);
 
-function Row({
-  title,
-  hint,
-  value,
-  own = false,
-}: {
-  title: string;
-  hint?: string;
-  value: ReactNode;
-  own?: boolean;
-}) {
-  return (
-    <section style={S.section}>
-      <h2 style={S.sectionTitle}>
-        {title}
-        {/* Only where it is true: a badge on every row is a badge nobody reads. */}
-        {own && <span style={S.badge}>this bot only</span>}
-      </h2>
-      <p style={S.value}>{value}</p>
-      {hint && <p style={S.sectionHint}>{hint}</p>}
-    </section>
-  );
-}
-
 function PanelHeader({ onBack, headingRef }: { onBack: () => void; headingRef?: RefObject<HTMLHeadingElement | null> }) {
   return (
-    <div style={S.header}>
-      <button className="vibe-icon-btn" style={S.backBtn} onClick={onBack} aria-label="Back">
+    <div className="vibe-panel__head">
+      <button className="vibe-btn vibe-btn--tonal" onClick={onBack} aria-label="Back">
         <BackIcon />
       </button>
-      <h1 ref={headingRef} tabIndex={-1} style={S.title}>
+      <h1 ref={headingRef} tabIndex={-1} className="vibe-panel__title">
         Settings
       </h1>
     </div>
   );
 }
-
-const S: Record<string, CSSProperties> = {
-  panel: { display: "flex", flexDirection: "column", gap: "1.1rem" },
-  header: { display: "flex", alignItems: "center", gap: "0.8rem" },
-  backBtn: {
-    width: 36,
-    height: 36,
-    flexShrink: 0,
-    background: "rgba(255,255,255,0.08)",
-    borderRadius: 999,
-    color: "#f5f2f3",
-  },
-  title: { margin: 0, fontSize: "1.15rem", fontWeight: 700 },
-  loading: { opacity: 0.55, fontSize: "0.85rem" },
-  intro: { margin: 0, fontSize: "0.82rem", opacity: 0.6, lineHeight: 1.5 },
-  code: {
-    padding: "0.1rem 0.35rem",
-    borderRadius: 5,
-    background: "rgba(255,255,255,0.1)",
-    fontSize: "0.78rem",
-  },
-
-  section: { display: "flex", flexDirection: "column", gap: "0.2rem" },
-  sectionTitle: {
-    margin: 0,
-    display: "flex",
-    alignItems: "center",
-    gap: "0.45rem",
-    fontSize: "0.72rem",
-    textTransform: "uppercase",
-    opacity: 0.5,
-    letterSpacing: "0.04em",
-  },
-  badge: {
-    padding: "0.1rem 0.4rem",
-    borderRadius: 999,
-    background: "var(--vibe-accent)",
-    // The play button's text colour, not white: the accent is lightened until `#0b0b0d` reads on it
-    // (`theme.ts`), so white on a light or grey accent could not be read until it was selected.
-    color: "#0b0b0d",
-    fontSize: "0.6rem",
-    letterSpacing: "0.02em",
-    textTransform: "none",
-    opacity: 0.9,
-  },
-  value: { margin: 0, fontSize: "0.9rem", lineHeight: 1.45 },
-  sectionHint: { margin: 0, fontSize: "0.74rem", opacity: 0.5 },
-
-  // The player's own notice, so the two cannot drift; the alignment is this panel's (it inherits).
-  notice: { ...PlayerStyles.notice, textAlign: "inherit" },
-};

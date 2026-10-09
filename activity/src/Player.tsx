@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useActivitySync, type ActivitySync } from "./useActivitySync";
 import type { PlaybackState, Track } from "./syncTypes";
 import { useRichPresence } from "./useRichPresence";
+import { useLayoutMode, useMinimised } from "./useLayoutMode";
 import { useCanManageGuild } from "./useGuildPermissions";
 import { resolveClientId } from "./discord";
 import { thumbnailSrc } from "./media";
@@ -9,11 +10,10 @@ import { resolveTheme, themeFromAccent } from "./theme";
 import Profile from "./Profile";
 import Settings from "./Settings";
 import { Shell, CenterMessage, ConnectingState, Notice } from "./Shell";
-import { TopBar } from "./TopBar";
-import { Transport, Artwork, NowPlaying, TrackAnnouncement, useControlCooldown } from "./Transport";
+import { TopBar, Tools } from "./TopBar";
+import { Transport, Artwork, NowPlaying, TrackAnnouncement, Wash, useControlCooldown } from "./Transport";
 import { Queue } from "./QueueRail";
-import { S } from "./playerStyles";
-import "./player.css";
+import "./styles/index.css";
 
 export type View = "player" | "profile" | "settings";
 
@@ -52,6 +52,13 @@ export default function Player({ sync: override }: { sync?: ActivitySync } = {})
   // the queue stacks under the player, and a stored "hidden" would otherwise leave no way to reopen it.
   const showQueue = queueOpen || !wide;
 
+  // A minimised window shows the song, nothing else: a panel left open when the window shrank would show a
+  // settings page nobody can read or press. Back to the player, and it stays there when the window grows again.
+  const minimised = useMinimised();
+  // Adjusted while rendering, not in an effect: the view is derived from a window property, and React re-renders
+  // at once without painting the panel first.
+  if (minimised && view !== "player") setView("player");
+
   useEffect(() => {
     if (view !== "player" || !openedFrom.current) return;
     document.getElementById(`vibe-open-${openedFrom.current}`)?.focus();
@@ -88,10 +95,12 @@ export default function Player({ sync: override }: { sync?: ActivitySync } = {})
   // where the mock reports "ready" but there is no RPC channel behind it.
   const rpcReady = status.phase === "ready" && !override;
   useRichPresence(rpcReady ? status.state : null, rpcReady);
+  // Discord's own word for focused, picture-in-picture or grid; a mock has none to ask.
+  useLayoutMode(!override);
 
   // One shell for every screen: only what goes inside it differs.
-  const shell = (children: ReactNode, floored = false) => (
-    <Shell theme={theme} backdrop={sync.prefs?.background ?? null} floored={floored}>
+  const shell = (children: ReactNode) => (
+    <Shell theme={theme} backdrop={sync.prefs?.background ?? null}>
       {children}
     </Shell>
   );
@@ -99,14 +108,14 @@ export default function Player({ sync: override }: { sync?: ActivitySync } = {})
   if (status.phase === "connecting") {
     return shell(
       <div className="vibe-body vibe-body--solo">
-        <ConnectingState accent={theme.accent} reason={status.reason} />
+        <ConnectingState reason={status.reason} />
       </div>
     );
   }
 
   if (status.phase === "error") {
     return shell(
-      <div className="vibe-body vibe-body--solo"><CenterMessage error>{status.error}</CenterMessage></div>
+      <div className="vibe-body vibe-body--solo"><CenterMessage error title={status.error} /></div>
     );
   }
 
@@ -136,10 +145,9 @@ export default function Player({ sync: override }: { sync?: ActivitySync } = {})
       <>
         <TopBar canManageGuild={canManageGuild} onOpen={openPanel} />
         <div className="vibe-body vibe-body--solo">
-          <CenterMessage>
-            Nothing is playing right now.
-            <span style={S.hintLine}>
-              Start something with <code style={S.code}>/play</code> in chat.
+          <CenterMessage mark title="Nothing is playing right now.">
+            <span className="vibe-hint">
+              Start something with <code className="vibe-code" translate="no">/play</code> in chat.
             </span>
           </CenterMessage>
           <Notice>{banner}</Notice>
@@ -155,15 +163,15 @@ export default function Player({ sync: override }: { sync?: ActivitySync } = {})
       track={state.track}
       live={live}
       banner={banner}
-      accent={theme.accent}
       canManageGuild={canManageGuild}
       onOpen={openPanel}
+      wide={wide}
+      lit={!sync.prefs?.background}
       queueOpen={queueOpen}
       showQueue={showQueue}
       onToggleQueue={() => setQueueOpen(!queueOpen)}
       cooldown={cooldown}
-    />,
-    true
+    />
   );
 }
 
@@ -173,25 +181,32 @@ type PlayingViewProps = {
   track: Track;
   live: boolean;
   banner: string | null | undefined;
-  accent: string;
   canManageGuild: boolean;
   onOpen: (view: View) => void;
+  /** Wide enough for the queue to be a rail, and for the strip to hold the buttons that lead away. */
+  wide: boolean;
+  /** The cover lights the stage. Off when the viewer chose a backdrop: theirs wins, and it then runs across the stage and the queue alike. */
+  lit: boolean;
   queueOpen: boolean;
   showQueue: boolean;
   onToggleQueue: () => void;
   cooldown: ReturnType<typeof useControlCooldown>;
 };
 
-/** The screen with something playing: the top bar, the stage and queue rail, and the transport pinned under them. */
+/**
+ * The screen with something playing: the stage (the cover, with the words beside it), the queue,
+ * and the strip of controls pinned under them.
+ */
 function PlayingView({
   sync,
   state,
   track,
   live,
   banner,
-  accent,
   canManageGuild,
   onOpen,
+  wide,
+  lit,
   queueOpen,
   showQueue,
   onToggleQueue,
@@ -199,25 +214,23 @@ function PlayingView({
 }: PlayingViewProps) {
   const { send, boost, jump, noticeAt, capabilities } = sync;
   const art = thumbnailSrc(track.thumbnail);
+  // On a wide pane they sit at the end of the strip, with the queue toggle; otherwise in the stage's corner.
+  const tools = { canManageGuild, onOpen };
 
   return (
     <>
-      <TopBar
-        canManageGuild={canManageGuild}
-        onOpen={onOpen}
-        queueOpen={queueOpen}
-        onToggleQueue={onToggleQueue}
-        queueCount={state.queueLength ?? state.queue?.length ?? 0}
-      />
-
       <TrackAnnouncement track={track} />
 
-      <div className={`vibe-body${showQueue ? "" : " vibe-body--solo"}`}>
-        <div style={S.stage}>
-          <Artwork key={art ?? "none"} src={art} accent={accent} />
-          <NowPlaying state={state} track={track} />
-          <Notice>{banner}</Notice>
-        </div>
+      <div className={`vibe-body vibe-body--player${showQueue ? "" : " vibe-body--alone"}`}>
+        <section className="vibe-stage" data-paused={state.paused ? "" : undefined}>
+          {lit && <Wash src={art} />}
+          {!wide && <TopBar {...tools} />}
+          <div className="vibe-sleeve">
+            <Artwork src={art} />
+            {/* Keyed by the song: the words are replaced, not edited, so they arrive together. */}
+            <NowPlaying key={`${track.uri}|${track.title}`} track={track} viewerCanControl={capabilities.canControl} />
+          </div>
+        </section>
 
         {showQueue && (
           <Queue
@@ -240,6 +253,17 @@ function PlayingView({
         canControl={capabilities.canControl}
         noticeAt={noticeAt}
         cooldown={cooldown}
+        notice={<Notice>{banner}</Notice>}
+        tools={
+          wide ? (
+            <Tools
+              {...tools}
+              queueOpen={queueOpen}
+              onToggleQueue={onToggleQueue}
+              queueCount={state.queueLength ?? state.queue?.length ?? 0}
+            />
+          ) : null
+        }
         onSeek={(ms) => send("seek", ms)}
         onTogglePlay={() => send(state.paused ? "resume" : "pause")}
         onPrevious={() => send("previous")}
@@ -261,7 +285,7 @@ const QUEUE_OPEN_KEY = "vibe.queueOpen";
  * data blocked, a private window), and a preference this small must never be able to take the
  * player down. Defaults to open: seeing what is queued is the reason the rail exists.
  */
-/** Whether the frame is wide enough for the queue to be its own rail (`player.css`'s 900 px breakpoint). */
+/** Whether the frame is wide enough for the queue to be its own rail (the 900 px breakpoint in `styles/views.css`). */
 function useWideFrame(): boolean {
   const query = "(min-width: 900px)";
   const [wide, setWide] = useState(() => window.matchMedia(query).matches);

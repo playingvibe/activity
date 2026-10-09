@@ -1,0 +1,522 @@
+/*
+ * Components: what a view is assembled from. Each is one class with its states beside it; none
+ * knows where it sits. Sizes that depend on the place (how wide the cover is) belong to views.css.
+ *
+ * A disabled control is dimmed by the `disabled` attribute alone, so a button and a slider that are
+ * refused for the same reason cannot look different.
+ */
+
+/* --- icon button ----------------------------------------------------------------------------- */
+/* A bare glyph in a 44px target; a disc appears under it on hover. The quiet controls are these. */
+
+.vibe-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--target);
+  height: var(--target);
+  border-radius: var(--r-full);
+  color: var(--ink-2);
+  /* No transition on colour or background: Chromium does not restart one when a custom property
+     changes, so a palette swapped while it ran would keep the old colour. */
+  transition: transform var(--t-fast) var(--ease);
+}
+.vibe-btn:hover:not(:disabled) {
+  background: var(--fill);
+  color: var(--ink);
+}
+.vibe-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.vibe-btn:disabled {
+  opacity: 0.4;
+}
+/* The transport's previous and skip: the same button, at the play button's strength. */
+.vibe-btn--strong {
+  color: var(--ink);
+}
+/* Where the button has to be found on a busy ground (Back, on a panel): it keeps its disc. */
+.vibe-btn--tonal {
+  background: var(--fill);
+  color: var(--ink);
+}
+.vibe-btn--tonal:hover:not(:disabled) {
+  background: var(--fill-hover);
+}
+/* On, for a button that toggles: brighter and on a disc, so the state is not colour alone. */
+.vibe-btn[aria-pressed="true"] {
+  background: var(--fill);
+  color: var(--ink);
+}
+
+/* Repeat is on, in either mode: the accent and a dot under the glyph. Track repeat adds its "1". */
+.vibe-loop:not([data-mode="off"]) {
+  color: var(--accent-text);
+}
+.vibe-loop:not([data-mode="off"])::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0.25rem;
+  width: 0.25rem;
+  height: 0.25rem;
+  margin-left: -0.125rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* --- play ------------------------------------------------------------------------------------ */
+/* The one filled control on the screen. */
+
+.vibe-play {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--r-full);
+  background: var(--accent);
+  color: var(--accent-ink);
+  transition: transform var(--t-fast) var(--ease);
+}
+.vibe-play:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: scale(1.04);
+}
+.vibe-play:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.vibe-play:disabled {
+  opacity: 0.4;
+}
+
+/* --- slider ---------------------------------------------------------------------------------- */
+/*
+ * A native range input over a rail of its own. The input does the work (pointer, keyboard, the
+ * thumb, what a screen reader hears); the rail under it is a meter whose fill is scaled, so moving
+ * it lays nothing out and it can glide between two samples of a clock.
+ */
+
+.vibe-slider {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+/* Inset by half a thumb, so the fill ends where the thumb's centre is at any value. */
+.vibe-slider > .vibe-meter {
+  position: absolute;
+  top: 50%;
+  left: 0.375rem;
+  right: 0.375rem;
+  margin-top: -0.125rem;
+  pointer-events: none;
+}
+/* The volume is a secondary control: its fill is ink, so the accent stays on the song's progress. */
+.vibe-slider--quiet .vibe-meter__fill {
+  background: var(--ink-2);
+}
+/* Two samples a second arrive; the fill moves through the half second between them. */
+.vibe-slider[data-glide] .vibe-meter__fill {
+  transition: transform 500ms linear;
+}
+.vibe-slider:has(:disabled) {
+  opacity: 0.4;
+}
+.vibe-range {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 1.25rem;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+}
+.vibe-range::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  background: none;
+}
+.vibe-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-top: -0.25rem;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transform: scale(0);
+  transition: transform var(--t-fast) var(--ease);
+}
+.vibe-range:hover:not(:disabled)::-webkit-slider-thumb,
+.vibe-range:focus-visible::-webkit-slider-thumb,
+.vibe-range:active:not(:disabled)::-webkit-slider-thumb {
+  transform: scale(1);
+}
+/* The ring goes on the whole input: the thumb alone looks the same focused as hovered. */
+.vibe-range:focus-visible {
+  outline-offset: 2px;
+  border-radius: var(--r-full);
+}
+/* A finger has no hover: the thumb is always there to aim for, and the hit area is a full target. */
+@media (hover: none) {
+  .vibe-range {
+    height: var(--target);
+  }
+  .vibe-range::-webkit-slider-thumb {
+    transform: scale(1);
+  }
+}
+
+/* --- cover and thumbnail ---------------------------------------------------------------------- */
+/* The cover is the one raised thing. Its width comes from the view; it is always a square. */
+
+.vibe-cover {
+  position: relative;
+  flex: none;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--r-2);
+  background: var(--surface);
+  box-shadow: var(--lift);
+}
+/* A picture in a stack: the one showing and, while it changes, the one arriving over it. */
+.vibe-layer {
+  position: absolute;
+  inset: 0;
+}
+.vibe-layer img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Still loading: out of sight, with the last picture showing underneath. */
+.vibe-layer[data-arriving="wait"] {
+  opacity: 0;
+}
+/* The next cover comes in over the last, from the side the queue is on. */
+.vibe-cover .vibe-layer[data-arriving="now"] {
+  animation: vibe-cover-in 360ms var(--ease) both;
+}
+@keyframes vibe-cover-in {
+  from {
+    opacity: 0;
+    transform: translateX(4%);
+  }
+}
+.vibe-thumb {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--target);
+  height: var(--target);
+  overflow: hidden;
+  border-radius: var(--r-1);
+  background: var(--surface-2);
+  object-fit: cover;
+}
+/* No artwork, or it failed to load: the note on the surface, in both sizes. */
+.vibe-cover__empty {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: var(--surface);
+  color: var(--ink-3);
+}
+.vibe-thumb svg {
+  color: var(--ink-3);
+}
+
+/* --- queue row ------------------------------------------------------------------------------- */
+/* A list item holding two buttons side by side: play this now, and boost it. */
+
+.vibe-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-2);
+  border-radius: var(--r-1);
+}
+.vibe-row:hover:not(:has(:disabled)) {
+  background: var(--surface);
+}
+.vibe-row__play {
+  display: grid;
+  grid-template-columns: var(--target) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+  padding: var(--s-2);
+  border-radius: var(--r-1);
+  text-align: left;
+}
+.vibe-row__play:focus-visible {
+  outline-offset: -2px;
+}
+.vibe-row__play:disabled {
+  opacity: 0.5;
+}
+.vibe-row__title {
+  display: block;
+  font-weight: var(--medium);
+}
+.vibe-row__artist {
+  display: block;
+  color: var(--ink-3);
+  font-size: var(--step--1);
+}
+/* The length, and under it who asked for the song. */
+.vibe-row__meta {
+  display: grid;
+  justify-items: end;
+  max-width: 6rem;
+  color: var(--ink-3);
+  font-size: var(--step--1);
+}
+
+/* --- boost ----------------------------------------------------------------------------------- */
+/* An arrow, and the tally beside it once somebody has boosted. 28px tall in a 44px target. */
+
+.vibe-boost {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  min-width: 2rem;
+  height: 1.75rem;
+  margin-right: var(--s-2);
+  padding-inline: var(--s-2);
+  border-radius: var(--r-full);
+  box-shadow: inset 0 0 0 1px var(--line-control);
+  color: var(--ink-2);
+  font-size: var(--step--1);
+}
+.vibe-boost::before {
+  content: "";
+  position: absolute;
+  inset: -0.5rem;
+}
+.vibe-boost:hover:not(:disabled) {
+  background: var(--fill);
+  color: var(--ink);
+}
+.vibe-boost[data-on] {
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+  color: var(--accent-text);
+}
+.vibe-boost:disabled {
+  opacity: 0.4;
+}
+
+/* --- badge ----------------------------------------------------------------------------------- */
+/* A short fact about the thing beside it. `--badge` is the accent unless the badge brings its own. */
+
+.vibe-badge {
+  --badge: var(--accent-text);
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding-inline: var(--s-2);
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--badge) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--badge) 40%, transparent);
+  color: var(--badge);
+  font-size: var(--step--2);
+  font-weight: var(--medium);
+  white-space: nowrap;
+}
+
+/* --- notice ---------------------------------------------------------------------------------- */
+/* A refused control, or why the player is frozen. A live region: see Shell.tsx on why it is always mounted. */
+
+.vibe-notice {
+  max-width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-1);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--ink);
+  font-size: var(--step--1);
+  text-align: center;
+}
+.vibe-notice--start {
+  text-align: start;
+}
+
+/* --- message, hint, code --------------------------------------------------------------------- */
+
+.vibe-message {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-2);
+  color: var(--ink);
+  font-size: var(--step-1);
+  text-align: center;
+  text-wrap: balance;
+}
+.vibe-message--error {
+  color: var(--danger);
+}
+.vibe-message__title {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+.vibe-message__mark {
+  margin-bottom: var(--s-2);
+  color: var(--ink-3);
+}
+.vibe-hint {
+  color: var(--ink-2);
+  font-size: var(--step--1);
+}
+.vibe-heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-weight: var(--medium);
+}
+.vibe-heading span {
+  color: var(--ink-3);
+  font-weight: var(--regular);
+}
+/* A slash command, set the way it looks while it is being typed. */
+.vibe-code {
+  padding: 0.05em 0.3em 0.1em;
+  border-radius: 0.25em;
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.92em;
+  white-space: nowrap;
+}
+
+/* --- connecting ------------------------------------------------------------------------------ */
+
+.vibe-connecting {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-3);
+  margin: auto;
+  text-align: center;
+}
+.vibe-connecting__mark {
+  color: var(--accent-text);
+  animation: vibe-pulse 1.6s ease-in-out infinite;
+}
+@keyframes vibe-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+/* --- meter ----------------------------------------------------------------------------------- */
+/* A thin bar that fills: the song's progress where there is no slider, and the level in the profile.
+   The fill is scaled, not resized, so moving it never lays anything out. */
+
+.vibe-meter {
+  display: block;
+  height: 0.25rem;
+  overflow: hidden;
+  border-radius: var(--r-full);
+  background: var(--line-control);
+}
+.vibe-meter__fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+}
+
+/* --- fact ------------------------------------------------------------------------------------ */
+/* A label over a value, under a hairline: a setting, a statistic. The grid they sit in is `vibe-facts`. */
+
+.vibe-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0 var(--s-6);
+  margin: 0;
+}
+.vibe-fact {
+  min-width: 0;
+  padding: var(--s-3) 0 var(--s-4);
+  border-top: 1px solid var(--line);
+}
+.vibe-fact[data-wide] {
+  grid-column: 1 / -1;
+}
+.vibe-fact > * {
+  margin: 0;
+}
+.vibe-fact__label {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-2);
+  font-size: var(--step--1);
+}
+.vibe-fact__value {
+  margin-top: var(--s-1);
+  font-size: var(--step-1);
+}
+
+/* --- skeleton -------------------------------------------------------------------------------- */
+/* Where text will be, while it loads. Opacity only, and still under reduced motion. */
+
+.vibe-skeleton {
+  display: block;
+  width: 70%;
+  height: 1.125rem;
+  margin-top: var(--s-2);
+  border-radius: var(--r-1);
+  background: var(--fill-hover);
+  animation: vibe-breathe 1.6s ease-in-out infinite;
+}
+.vibe-skeleton--label {
+  width: 40%;
+  height: 0.875rem;
+  margin-top: 0;
+}
+@keyframes vibe-breathe {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* --- avatar ---------------------------------------------------------------------------------- */
+
+.vibe-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--surface-2);
+  object-fit: cover;
+  font-size: var(--step-1);
+  font-weight: var(--bold);
+}
+
+/* --- arrival --------------------------------------------------------------------------------- */
+/* One entrance, for a view that replaces another. Opacity only: nothing slides into place. */
+
+.vibe-arrive {
+  animation: vibe-arrive var(--t) linear both;
+}
+@keyframes vibe-arrive {
+  from {
+    opacity: 0;
+  }
+}

@@ -1,0 +1,37 @@
+/*
+ * Forced colours (Windows high contrast). The system drops backgrounds and shadows, so every edge or
+ * state drawn with one needs a real outline or a system colour. Last in the order, so these win over
+ * the component rules (which set the same properties at the same specificity) without help.
+ */
+@media (forced-colors: active) {
+  .vibe-play,
+  .vibe-boost,
+  .vibe-badge,
+  .vibe-thumb,
+  .vibe-avatar,
+  .vibe-notice,
+  .vibe-btn--tonal {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+  /* A border, not an outline: the cover clips its own children, and a picture can sit over an inner outline. */
+  .vibe-cover {
+    border: 1px solid CanvasText;
+  }
+  .vibe-btn[aria-pressed="true"],
+  .vibe-boost[data-on] {
+    outline: 2px solid Highlight;
+  }
+  /* A rail and its fill: the track has to be there for the fill to mean anything. */
+  .vibe-meter {
+    background: GrayText;
+  }
+  .vibe-meter__fill,
+  .vibe-slider--quiet .vibe-meter__fill,
+  .vibe-loop::after {
+    background: Highlight;
+  }
+  .vibe-hairline {
+    background: GrayText;
+  }
+}

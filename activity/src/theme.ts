@@ -44,8 +44,8 @@ export function resolveTheme(clientId: string): Theme {
  * what most of the hand-tuned pairs already do (their `accentHover` is the accent, lighter; Vibe Dev's goes the other way, white to a darker grey).
  *
  * **The accent is lightened until it is readable.** It can look as if no guard is needed, since
- * `player.css` only mixes the accent into surfaces at 9% and into the ambient glow at 2-9% — but
- * `.vibe-play-btn` paints `background: var(--vibe-accent)` at full strength with `#0b0b0d` text, and
+ * the stylesheets mostly mix the accent into surfaces and the glow at low strength, but
+ * `.vibe-play` paints `background: var(--accent)` at full strength with `#0b0b0d` text, and
  * the loop button renders the accent *as* text on a near-black surface. A dark accent therefore made
  * the transport's primary control invisible, and the picker accepts any hex at all.
  *

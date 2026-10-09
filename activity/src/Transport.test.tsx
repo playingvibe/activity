@@ -20,6 +20,6 @@ describe("the song-change announcement", () => {
 
     expect(html).toContain('role="status"');
     expect(html).toContain("Now playing: Song by Artist");
-    expect(html).toContain("clip:rect(0 0 0 0)");
+    expect(html).toContain('class="vibe-sr"');
   });
 });
