@@ -333,10 +333,10 @@ on the raised surfaces), `--accent-soft` and `--accent-line` (the command chip),
 | Palette | Accent | dark glyph on it | as a fill on ground | as text on ground | on surface | on surface-2 |
 |---|---|---|---|---|---|---|
 | Vibe Dev | `#FFFFFF` | 19.66 | 19.66 | 19.26 | 18.15 | 16.80 |
-| Vibe | `#E05570` | 5.34 | 5.34 | 6.73 | 6.34 | 5.87 |
-| Vibe 2 | `#5382be` (from `#4577B8`) | 4.97 | 4.97 | 6.64 | 6.26 | 5.79 |
-| Vibe 3 | `#D9B15C` | 9.73 | 9.73 | 11.02 | 10.39 | 9.62 |
-| Vibe Beta | `#559E68` | 6.07 | 6.07 | 7.68 | 7.24 | 6.70 |
+| Vibe | `#FF295E` | 5.37 | 5.37 | 6.22 | 5.86 | 5.43 |
+| Vibe 2 | `#1A79FF` | 4.89 | 4.89 | 6.30 | 5.94 | 5.50 |
+| Vibe 3 | `#FFC20A` | 12.15 | 12.15 | 12.99 | 12.24 | 11.33 |
+| Vibe Beta | `#00A331` | 5.88 | 5.88 | 7.23 | 6.81 | 6.31 |
 | A viewer's `#fff3c4` | `#fff3c4` | 17.67 | 17.67 | 17.66 | 16.64 | 15.40 |
 | A viewer's `#1a0033` | `#a64cff` | 4.77 | 4.77 | 6.17 | 5.82 | 5.39 |
 

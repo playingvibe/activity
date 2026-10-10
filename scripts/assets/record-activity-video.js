@@ -5,7 +5,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import ffmpegPath from "ffmpeg-static";
-import { findChrome, serve, capture } from "../lib/activityPreview.js";
+import { findChrome, serve, capture, repairFrames } from "../lib/activityPreview.js";
 
 const run = promisify(execFile);
 
@@ -43,11 +43,11 @@ const run = promisify(execFile);
  *   node scripts/assets/record-activity-video.js --frames 60 --fps 12    a shorter loop
  *   node scripts/assets/record-activity-video.js --budget 1000           a laxer size ceiling, in KB
  *   node scripts/assets/record-activity-video.js --client <application id> --out <file>   another
- *       instance's palette (Vibe 2, Vibe 3, Beta), e.g. resource/brand/activity/vibe2-activity-preview.mp4
+ *       instance's palette (Vibe 2, Vibe 3, Beta), e.g. resource/brand/activity/vibe2/preview.mp4
  */
 const ROOT = path.join(import.meta.dirname, "..", "..");
 const DIST = path.join(ROOT, "activity", "dist");
-const OUT = path.join(ROOT, "resource", "brand", "activity", "vibe-activity-preview.mp4");
+const OUT = path.join(ROOT, "resource", "brand", "activity", "vibe", "preview.mp4");
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -57,7 +57,7 @@ const arg = (name, fallback) => {
 const OPTIONS = {
   port: Number(arg("port", 4323)),
   /**
-   * 200 at 20fps is ten seconds, which is the ceiling this slot accepts.
+   * 142 at 20fps is just over seven seconds, inside the ten this slot accepts.
    *
    * **20fps rather than 12 because the frame rate is nearly free here and the capture is not.**
    * The footage is a static dark UI with one moving element, so extra frames compress to almost
@@ -65,14 +65,14 @@ const OPTIONS = {
    * wall time: one Chrome process per frame, about a second each. That is the real trade, and it
    * is worth roughly ninety seconds for a progress bar that glides instead of stepping.
    */
-  frames: Number(arg("frames", 200)),
+  frames: Number(arg("frames", 142)),
   fps: Number(arg("fps", 20)),
   /**
-   * Milliseconds of **page** time between frames. 200 x 720 = 144s, and the fixture's track
-   * starts at 1:08 of 3:33 — so the sweep ends as the bar reaches the end rather than partway
-   * through, which is what makes the loop feel finished instead of cut off.
+   * Milliseconds of **page** time between frames. Exactly one second, so the clock climbs by one second every frame and the
+   * bar by the same distance (an uneven step made the clock repeat a second now and then, which read as stutter). 142 x 1 s
+   * from the fixture's 1:08 of 3:33 ends as the bar reaches the end rather than partway through.
    */
-  step: Number(arg("step", 720)),
+  step: Number(arg("step", 1000)),
   /** Capture size, scaled to `outWidth` x `outHeight` by ffmpeg. */
   width: Number(arg("width", 1280)),
   height: Number(arg("height", 720)),
@@ -171,11 +171,12 @@ async function main() {
   );
 
   try {
-    for (let i = 0; i < OPTIONS.frames; i += 1) {
+    const files = [];
+    const take = async (i, tag = "") => {
       const file = path.join(work, `frame-${String(i).padStart(4, "0")}.png`);
       await capture({
         chrome,
-        profileDir: path.join(work, `profile-${i}`),
+        profileDir: path.join(work, `profile-${i}${tag}`),
         url,
         width: OPTIONS.width,
         height: OPTIONS.height,
@@ -183,9 +184,17 @@ async function main() {
         outFile: file,
       });
       if (!fs.existsSync(file)) throw new Error(`Chrome produced no frame ${i}`);
+      return file;
+    };
+    for (let i = 0; i < OPTIONS.frames; i += 1) {
+      files.push(await take(i));
       process.stdout.write(`\r  frame ${i + 1}/${OPTIONS.frames}`);
     }
     process.stdout.write("\n");
+    // A frame photographed before the page finished drawing flashes in the loop; take those again.
+    let retake = 0;
+    const redone = await repairFrames(files, (i) => take(i, `-retry${retake++}`));
+    if (redone) console.log(`  retook ${redone} frame(s) caught mid-load`);
 
     fs.mkdirSync(path.dirname(OPTIONS.out), { recursive: true });
     const pattern = path.join(work, "frame-%04d.png");

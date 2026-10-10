@@ -16,23 +16,23 @@ export const INSTANCE_THEMES: Record<string, Theme> = {
   },
   "815329807377498153": {
     "name": "Vibe",
-    "accent": "#E05570",
-    "accentHover": "#ec6a83"
+    "accent": "#FF295E",
+    "accentHover": "#ff4371"
   },
   "1533281867523031070": {
     "name": "Vibe 2",
-    "accent": "#4577B8",
-    "accentHover": "#5A8ECC"
+    "accent": "#1A79FF",
+    "accentHover": "#3589FF"
   },
   "1001935021436850207": {
     "name": "Vibe 3",
-    "accent": "#D9B15C",
-    "accentHover": "#e8c477"
+    "accent": "#FFC20A",
+    "accentHover": "#ffc927"
   },
   "820636341788344321": {
     "name": "Vibe Beta",
-    "accent": "#559E68",
-    "accentHover": "#6bb37e"
+    "accent": "#00A331",
+    "accentHover": "#1fae4a"
   }
 };
 

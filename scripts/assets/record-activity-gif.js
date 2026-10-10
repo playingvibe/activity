@@ -7,7 +7,7 @@ import { createCanvas, loadImage } from "@napi-rs/canvas";
 import gifenc from "gifenc";
 // Serving dist, finding a browser, generating the stand-in artwork and screenshotting at an
 // exact point in page time are all shared with `scripts/assets/capture-activity-shots.js`.
-import { findChrome, serve, capture } from "../lib/activityPreview.js";
+import { findChrome, serve, capture, repairFrames } from "../lib/activityPreview.js";
 
 const { GIFEncoder, quantize, applyPalette } = gifenc;
 
@@ -37,13 +37,14 @@ const { GIFEncoder, quantize, applyPalette } = gifenc;
  * Usage:
  *   node scripts/assets/record-activity-gif.js                 record the default loop
  *   node scripts/assets/record-activity-gif.js --serve         just serve dist, for eyeballing it
+ *   node scripts/assets/record-activity-gif.js --client <id> --out <file>   another bot's palette
  *   node scripts/assets/record-activity-gif.js --frames 60 --step 2000 --delay 100
  */
 const ROOT = path.join(import.meta.dirname, "..", "..");
 const DIST = path.join(ROOT, "activity", "dist");
 // Beside the invite images rather than loose in `brand/`: both are uploaded on the same
 // Developer Portal screen, and `brand/` itself is source art (gradients, avatars), not output.
-const OUT = path.join(ROOT, "resource", "brand", "activity", "vibe-activity.gif");
+const OUT = path.join(ROOT, "resource", "brand", "activity", "vibe", "preview.gif");
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -64,7 +65,7 @@ const OPTIONS = {
    * turns that into a visible sweep, which is what a viewer needs to understand that this is a
    * live player and not a screenshot.
    */
-  step: Number(arg("step", 1500)),
+  step: Number(arg("step", 2000)),
   /** Milliseconds each frame is shown for. ~8fps: smooth enough, and small enough to load. */
   delay: Number(arg("delay", 120)),
   /**
@@ -93,6 +94,8 @@ const OPTIONS = {
    */
   dither: Number(arg("dither", Number(arg("width", 560)) > Number(arg("height", 760)) ? 10 : 0)),
   out: arg("out", OUT),
+  /** An application id whose palette to record (`&client=` in the mock); default is the flagship's. */
+  client: arg("client", null),
 };
 
 /**
@@ -191,7 +194,7 @@ async function main() {
   }
 
   const server = await serve(OPTIONS.port);
-  const url = `http://localhost:${OPTIONS.port}/?mock=1`;
+  const url = `http://localhost:${OPTIONS.port}/?mock=1${OPTIONS.client ? `&client=${OPTIONS.client}` : ""}`;
 
   if (flag("serve")) {
     console.log(`Serving ${url}\nCtrl-C to stop.`);
@@ -210,11 +213,11 @@ async function main() {
 
   try {
     const files = [];
-    for (let i = 0; i < OPTIONS.frames; i += 1) {
+    const take = async (i, tag = "") => {
       const file = path.join(work, `frame-${String(i).padStart(3, "0")}.png`);
       await capture({
         chrome,
-        profileDir: path.join(work, `profile-${i}`),
+        profileDir: path.join(work, `profile-${i}${tag}`),
         url,
         width: OPTIONS.width,
         height: OPTIONS.height,
@@ -222,10 +225,17 @@ async function main() {
         outFile: file,
       });
       if (!fs.existsSync(file)) throw new Error(`Chrome produced no frame ${i}`);
-      files.push(file);
+      return file;
+    };
+    for (let i = 0; i < OPTIONS.frames; i += 1) {
+      files.push(await take(i));
       process.stdout.write(`\r  frame ${i + 1}/${OPTIONS.frames}`);
     }
     process.stdout.write("\n");
+    // A frame photographed before the page finished drawing flashes in the loop; take those again.
+    let retake = 0;
+    const redone = await repairFrames(files, (i) => take(i, `-retry${retake++}`));
+    if (redone) console.log(`  retook ${redone} frame(s) caught mid-load`);
 
     const gif = await encode(files);
     fs.mkdirSync(path.dirname(OPTIONS.out), { recursive: true });

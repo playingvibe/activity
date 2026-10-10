@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 
 const run = promisify(execFile);
 
@@ -191,4 +191,75 @@ export async function capture({ chrome, profileDir, url, width, height, budgetMs
     ],
     { timeout: 60_000, windowsHide: true }
   );
+}
+
+/** Side of one comparison block, in pixels of the 1x image. */
+const BLOCK = 16;
+/** Channel difference, 0..255, from the usual block that marks a frame as caught mid-load. */
+const BLOCK_LIMIT = 36;
+/** The bottom of the frame holds the progress bar, the clock and the controls, which change from frame to frame by design. */
+const MOVING_SHARE = 0.18;
+
+/**
+ * Per-block average colour of a frame, over the part of it that holds still.
+ * @param {string} file
+ * @returns {Promise<number[][]>}
+ */
+async function blocksOf(file) {
+  const img = await loadImage(file);
+  const cols = Math.floor(img.width / 2 / BLOCK);
+  const rows = Math.floor((img.height / 2) * (1 - MOVING_SHARE) / BLOCK);
+  const small = createCanvas(cols, rows);
+  const ctx = small.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, cols * BLOCK * 2, rows * BLOCK * 2, 0, 0, cols, rows);
+  const { data } = ctx.getImageData(0, 0, cols, rows);
+  const out = [];
+  for (let i = 0; i < data.length; i += 4) out.push([data[i], data[i + 1], data[i + 2]]);
+  return out;
+}
+
+/**
+ * Finds the frames that were screenshotted before the page had finished drawing (a queue thumbnail still empty, the
+ * artwork not there yet) and captures them again.
+ *
+ * Chrome occasionally takes the picture a moment early even at an exact page time, and in a loop one such frame shows as a
+ * black flash. Everything above the controls is meant to be identical in every frame, so a frame is broken when a block of
+ * it is far from the same block's median across the whole recording.
+ * @param {string[]} files - The frames, in order.
+ * @param {(index: number) => Promise<void>} recapture - Writes frame `index` again, to the same file.
+ * @param {number} [attempts]
+ * @returns {Promise<number>} How many frames had to be taken again.
+ */
+export async function repairFrames(files, recapture, attempts = 4) {
+  let redone = 0;
+  for (let round = 0; round < attempts; round += 1) {
+    const all = await Promise.all(files.map(blocksOf));
+    const median = all[0].map((_, b) => [0, 1, 2].map((c) => all.map((frame) => frame[b][c]).sort((x, y) => x - y)[all.length >> 1]));
+    const broken = all
+      .map((frame, i) => [i, frame.some((px, b) => px.some((v, c) => Math.abs(v - median[b][c]) > BLOCK_LIMIT))])
+      .filter(([, bad]) => bad)
+      .map(([i]) => i);
+    if (broken.length === 0) return redone;
+    if (round === attempts - 1) {
+      // Some moments come out the same however often they are taken again. A neighbour's picture stands in for them: the
+      // content above the controls is the same in every frame, and one repeated frame is not visible in a loop.
+      const bad = new Set(broken);
+      for (const i of broken) {
+        let from = i - 1;
+        while (from >= 0 && bad.has(from)) from -= 1;
+        if (from < 0) {
+          from = i + 1;
+          while (from < files.length && bad.has(from)) from += 1;
+        }
+        if (from >= 0 && from < files.length) fs.copyFileSync(files[from], files[i]);
+      }
+      return redone;
+    }
+    for (const i of broken) {
+      await recapture(i);
+      redone += 1;
+    }
+  }
+  return redone;
 }

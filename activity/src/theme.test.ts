@@ -19,7 +19,7 @@ function contrast(a: string, b: string): number {
 
 describe("themeFromAccent", () => {
   it("makes any accent readable under the play button's icon, whatever was picked", () => {
-    for (const accent of ["#000000", "#111111", "#1a0033", "#220000", "#003300", "#000044", "#ffffff", "#e8c477", "#ff0066"]) {
+    for (const accent of ["#000000", "#111111", "#1a0033", "#220000", "#003300", "#000044", "#ffffff", "#ffc927", "#ff0066"]) {
       const theme = themeFromAccent(accent);
       expect(contrast(theme.accent, CONTROL_TEXT), accent).toBeGreaterThanOrEqual(4.5);
     }
